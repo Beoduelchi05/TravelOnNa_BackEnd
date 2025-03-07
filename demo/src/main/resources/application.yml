@@ -1,0 +1,61 @@
+server:
+  port: 8080
+
+spring:
+  profiles:
+    active: dev
+    include: secret
+    
+  datasource:
+    url: jdbc:mysql://travelonna.chm0a4kmgsm5.ap-northeast-2.rds.amazonaws.com:3306/travelonna?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    username: admin
+    password: ${db.password}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    
+  jpa:
+    database: mysql
+    database-platform: org.hibernate.dialect.MySQLDialect
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${google.client-id}
+            # 안드로이드 OAuth2.0 클라이언트는 client_secret이 없음
+            redirect-uri: ${google.redirect-uri}
+            scope:
+              - email
+              - profile
+
+# Swagger 설정
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    tags-sorter: alpha
+    operations-sorter: alpha
+  default-consumes-media-type: application/json
+  default-produces-media-type: application/json
+  paths-to-match:
+    - /api/**
+
+jwt:
+  secret: ${jwt.secret-key}
+  access-token-validity-in-seconds: 3600
+  refresh-token-validity-in-days: 14
+
+logging:
+  level:
+    org.springframework.security: DEBUG
+    com.travelonna: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE 
