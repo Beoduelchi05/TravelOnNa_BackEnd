@@ -40,3 +40,6 @@ out/
 ### Application Secrets ###
 **/application-secret.yml
 **/application-prod.yml
+
+### Google OAuth2 Client Secret ###
+client_secret_57756654565-ja740eog24ngke0koombajh6p3f55j27.apps.googleusercontent.com.json
