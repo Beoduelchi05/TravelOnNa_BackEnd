@@ -18,7 +18,11 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Map;
 
 @Slf4j
 @RestController
@@ -86,6 +90,41 @@ public class AuthController {
         log.info("Test login request received for email: {}", request.getEmail());
         TokenResponse tokenResponse = authService.authenticateForTest(request.getEmail(), request.getName());
         return ResponseEntity.ok(tokenResponse);
+    }
+
+    @GetMapping("/ping")
+    public ResponseEntity<String> ping() {
+        log.info("Ping request received");
+        return ResponseEntity.ok("pong");
+    }
+    
+    @PostMapping("/debug")
+    public ResponseEntity<Map<String, Object>> debug(@RequestBody(required = false) Map<String, Object> payload, 
+                                                   HttpServletRequest request) {
+        log.info("Debug request received");
+        
+        // 요청 정보 로깅
+        log.info("Request URI: {}", request.getRequestURI());
+        log.info("Request method: {}", request.getMethod());
+        
+        // 헤더 정보 로깅
+        Enumeration<String> headerNames = request.getHeaderNames();
+        while (headerNames.hasMoreElements()) {
+            String headerName = headerNames.nextElement();
+            log.info("Header - {}: {}", headerName, request.getHeader(headerName));
+        }
+        
+        // 요청 본문 로깅
+        log.info("Request payload: {}", payload);
+        
+        // 응답 생성
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("message", "Debug endpoint called successfully");
+        response.put("timestamp", System.currentTimeMillis());
+        response.put("receivedPayload", payload);
+        
+        return ResponseEntity.ok(response);
     }
 
     @RequestMapping(value = "/**", method = RequestMethod.OPTIONS)
