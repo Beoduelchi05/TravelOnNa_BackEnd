@@ -16,10 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
 
@@ -28,6 +25,7 @@ import jakarta.validation.Valid;
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
 @Tag(name = "인증", description = "인증 관련 API")
+@CrossOrigin(origins = "*", allowedHeaders = "*")
 public class AuthController {
 
     private final AuthService authService;
@@ -43,9 +41,17 @@ public class AuthController {
     public ResponseEntity<TokenResponse> googleLogin(
             @Parameter(description = "Google 인증 코드", required = true)
             @Valid @RequestBody GoogleTokenRequest request) {
-        log.info("Google login request received for code: {}", request.getCode());
-        TokenResponse tokenResponse = authService.authenticateWithGoogle(request.getCode());
-        return ResponseEntity.ok(tokenResponse);
+        log.info("Google login request received");
+        log.debug("Code length: {}", request.getCode().length());
+        
+        try {
+            TokenResponse tokenResponse = authService.authenticateWithGoogle(request.getCode());
+            log.info("Google login successful");
+            return ResponseEntity.ok(tokenResponse);
+        } catch (Exception e) {
+            log.error("Error during Google authentication", e);
+            throw e;
+        }
     }
 
     @Operation(summary = "토큰 갱신", description = "리프레시 토큰을 사용하여 액세스 토큰을 갱신합니다.")
@@ -80,5 +86,11 @@ public class AuthController {
         log.info("Test login request received for email: {}", request.getEmail());
         TokenResponse tokenResponse = authService.authenticateForTest(request.getEmail(), request.getName());
         return ResponseEntity.ok(tokenResponse);
+    }
+
+    @RequestMapping(value = "/**", method = RequestMethod.OPTIONS)
+    public ResponseEntity<?> handleOptions() {
+        log.info("OPTIONS request received");
+        return ResponseEntity.ok().build();
     }
 } 

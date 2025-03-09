@@ -30,7 +30,12 @@ public class AuthService {
     private String redirectUri;
 
     public TokenResponse authenticateWithGoogle(String authorizationCode) {
+        log.info("Starting Google authentication process");
+        log.debug("Using client ID: {}", clientId);
+        log.debug("Using redirect URI: {}", redirectUri);
+        
         try {
+            log.info("Exchanging authorization code for token");
             // Google로부터 토큰 받기 (안드로이드 클라이언트는 client_secret이 없음)
             GoogleTokenResponse tokenResponse = new GoogleAuthorizationCodeTokenRequest(
                     new NetHttpTransport(),
@@ -41,7 +46,9 @@ public class AuthService {
                     authorizationCode,
                     redirectUri)
                     .execute();
-
+            
+            log.info("Token exchange successful");
+            
             // ID 토큰 검증
             GoogleIdToken idToken = tokenResponse.parseIdToken();
             GoogleIdToken.Payload payload = idToken.getPayload();
@@ -50,27 +57,33 @@ public class AuthService {
             String email = payload.getEmail();
             String name = (String) payload.get("name");
             
-            log.info("User authenticated with Google: {}, {}", email, name);
+            log.info("User authenticated with Google: email={}", email);
+            log.debug("User name: {}", name);
 
             // 사용자 인증 및 JWT 토큰 생성
-            return oAuth2AuthenticationService.authenticateUser(email, name);
+            log.info("Generating JWT tokens");
+            TokenResponse response = oAuth2AuthenticationService.authenticateUser(email, name);
+            log.info("JWT tokens generated successfully");
+            
+            return response;
         } catch (IOException e) {
-            log.error("Error authenticating with Google", e);
+            log.error("Error authenticating with Google: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to authenticate with Google", e);
         }
     }
 
     public TokenResponse refreshToken(String refreshToken) {
+        log.info("Refreshing token");
         return oAuth2AuthenticationService.refreshToken(refreshToken);
     }
 
     /**
-     * 테스트 환경에서만 사용 가능한 인증 메서드
+     * 테스트용 인증 메서드
      * 실제 구글 인증 과정 없이 직접 사용자 정보로 인증합니다.
      */
     @Profile({"dev", "local"})
     public TokenResponse authenticateForTest(String email, String name) {
-        log.info("Test authentication for user: {}, {}", email, name);
+        log.info("Test authentication for user: {}", email);
         return oAuth2AuthenticationService.authenticateUser(email, name);
     }
 } 
