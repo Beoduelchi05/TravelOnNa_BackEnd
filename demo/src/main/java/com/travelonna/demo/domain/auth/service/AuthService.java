@@ -31,6 +31,13 @@ public class AuthService {
         log.debug("Using client ID: {}", clientId);
         log.debug("Authorization code length: {}", authorizationCode != null ? authorizationCode.length() : 0);
         
+        // 인증 코드의 일부를 로그에 남김 (보안을 위해 전체 코드는 로그에 남기지 않음)
+        if (authorizationCode != null && authorizationCode.length() > 20) {
+            log.debug("Authorization code preview: {}", authorizationCode);
+        } else if (authorizationCode != null) {
+            log.debug("Authorization code is too short to preview safely");
+        }
+        
         try {
             log.info("Exchanging authorization code for token");
             // Google로부터 토큰 받기 (안드로이드 클라이언트는 client_secret이 없음)
@@ -68,6 +75,22 @@ public class AuthService {
         } catch (IOException e) {
             log.error("Error authenticating with Google: {}", e.getMessage(), e);
             log.error("Error details: ", e);
+            
+            // 401 Unauthorized 오류에 대한 자세한 로깅
+            if (e.getMessage() != null && e.getMessage().contains("401 Unauthorized")) {
+                log.error("Google authentication failed with 401 Unauthorized. This usually means:");
+                log.error("1. The authorization code is invalid or expired");
+                log.error("2. The authorization code has already been used");
+                log.error("3. The client ID or client secret is incorrect");
+                log.error("4. The redirect URI doesn't match the one used to get the authorization code");
+                
+                // 안드로이드 앱용 클라이언트 ID 사용 시 주의사항
+                log.error("For Android client IDs, make sure:");
+                log.error("1. You're using the correct client ID from Google Developer Console");
+                log.error("2. The authorization code is fresh and hasn't been used before");
+                log.error("3. You're using an empty string for redirect URI, not null");
+            }
+            
             throw new RuntimeException("Failed to authenticate with Google", e);
         }
     }

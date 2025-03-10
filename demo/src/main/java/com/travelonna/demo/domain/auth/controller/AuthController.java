@@ -15,6 +15,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -48,7 +49,13 @@ public class AuthController {
             HttpServletRequest httpRequest) {
         log.info("Google login request received");
         log.debug("Code length: {}", request.getCode().length());
-        log.debug("Code first 10 chars: {}", request.getCode().substring(0, Math.min(10, request.getCode().length())));
+        
+        // 인증 코드의 일부를 로그에 남김 (보안을 위해 전체 코드는 로그에 남기지 않음)
+        if (request.getCode() != null && request.getCode().length() > 20) {
+            String firstPart = request.getCode().substring(0, 10);
+            String lastPart = request.getCode().substring(request.getCode().length() - 10);
+            log.debug("Authorization code preview: {}...{}", firstPart, lastPart);
+        }
         
         // 요청 정보 로깅
         log.debug("Request URI: {}", httpRequest.getRequestURI());
@@ -70,6 +77,14 @@ public class AuthController {
         } catch (Exception e) {
             log.error("Error during Google authentication: {}", e.getMessage());
             log.error("Error details: ", e);
+            
+            // 오류 유형에 따라 다른 응답 반환
+            if (e.getMessage() != null && e.getMessage().contains("401 Unauthorized")) {
+                log.error("Google authentication failed with 401 Unauthorized. This usually means the authorization code is invalid or expired.");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(null);
+            }
+            
             throw e;
         }
     }
