@@ -26,9 +26,6 @@ public class AuthService {
     @Value("${google.client-id}")
     private String clientId;
 
-    @Value("${google.redirect-uri}")
-    private String redirectUri;
-
     public TokenResponse authenticateWithGoogle(String authorizationCode) {
         log.info("Starting Google authentication process");
         log.debug("Using client ID: {}", clientId);
@@ -39,13 +36,13 @@ public class AuthService {
             // Google로부터 토큰 받기 (안드로이드 클라이언트는 client_secret이 없음)
             // 안드로이드 앱용 클라이언트 ID를 사용할 때는 리디렉션 URI를 빈 문자열로 설정
             GoogleTokenResponse tokenResponse = new GoogleAuthorizationCodeTokenRequest(
-                    new NetHttpTransport(),
-                    GsonFactory.getDefaultInstance(),
-                    "https://oauth2.googleapis.com/token",
-                    clientId,
-                    null, // 안드로이드 클라이언트는 client_secret이 없음
-                    authorizationCode,
-                    "" // 리디렉션 URI를 빈 문자열로 설정
+                    new NetHttpTransport(),                // HTTP 전송 방식
+                    GsonFactory.getDefaultInstance(),      // JSON 파서
+                    "https://oauth2.googleapis.com/token", // Google OAuth 토큰 엔드포인트
+                    clientId,                              // 클라이언트 ID
+                    "",                                    // 클라이언트 시크릿 (안드로이드는 빈 문자열)
+                    authorizationCode,                     // 인증 코드
+                    ""                                     // 리디렉션 URI (빈 문자열)
                     )
                     .execute();
             
@@ -88,8 +85,6 @@ public class AuthService {
     public TokenResponse authenticateForTest(String email, String name) {
         log.info("Test authentication for user: {}", email);
         log.info("Starting Google authentication process");
-        log.debug("Using client ID: {}", clientId);
-        log.debug("Using redirect URI: {}", redirectUri);
     
         return oAuth2AuthenticationService.authenticateUser(email, name);
     }
