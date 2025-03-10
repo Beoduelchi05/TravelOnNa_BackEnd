@@ -44,16 +44,32 @@ public class AuthController {
     @PostMapping("/google")
     public ResponseEntity<TokenResponse> googleLogin(
             @Parameter(description = "Google 인증 코드", required = true)
-            @Valid @RequestBody GoogleTokenRequest request) {
+            @Valid @RequestBody GoogleTokenRequest request,
+            HttpServletRequest httpRequest) {
         log.info("Google login request received");
         log.debug("Code length: {}", request.getCode().length());
+        log.debug("Code first 10 chars: {}", request.getCode().substring(0, Math.min(10, request.getCode().length())));
+        
+        // 요청 정보 로깅
+        log.debug("Request URI: {}", httpRequest.getRequestURI());
+        log.debug("Request method: {}", httpRequest.getMethod());
+        log.debug("Remote address: {}", httpRequest.getRemoteAddr());
+        
+        // 헤더 정보 로깅
+        Enumeration<String> headerNames = httpRequest.getHeaderNames();
+        while (headerNames.hasMoreElements()) {
+            String headerName = headerNames.nextElement();
+            log.debug("Header - {}: {}", headerName, httpRequest.getHeader(headerName));
+        }
         
         try {
+            log.info("Calling authenticateWithGoogle method");
             TokenResponse tokenResponse = authService.authenticateWithGoogle(request.getCode());
             log.info("Google login successful");
             return ResponseEntity.ok(tokenResponse);
         } catch (Exception e) {
-            log.error("Error during Google authentication", e);
+            log.error("Error during Google authentication: {}", e.getMessage());
+            log.error("Error details: ", e);
             throw e;
         }
     }

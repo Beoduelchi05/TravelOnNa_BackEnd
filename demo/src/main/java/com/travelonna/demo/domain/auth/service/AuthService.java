@@ -32,11 +32,12 @@ public class AuthService {
     public TokenResponse authenticateWithGoogle(String authorizationCode) {
         log.info("Starting Google authentication process");
         log.debug("Using client ID: {}", clientId);
-        log.debug("Using redirect URI: {}", redirectUri);
+        log.debug("Authorization code length: {}", authorizationCode != null ? authorizationCode.length() : 0);
         
         try {
             log.info("Exchanging authorization code for token");
             // Google로부터 토큰 받기 (안드로이드 클라이언트는 client_secret이 없음)
+            // 안드로이드 앱용 클라이언트 ID를 사용할 때는 리디렉션 URI를 빈 문자열로 설정
             GoogleTokenResponse tokenResponse = new GoogleAuthorizationCodeTokenRequest(
                     new NetHttpTransport(),
                     GsonFactory.getDefaultInstance(),
@@ -44,7 +45,8 @@ public class AuthService {
                     clientId,
                     null, // 안드로이드 클라이언트는 client_secret이 없음
                     authorizationCode,
-                    redirectUri)
+                    "" // 리디렉션 URI를 빈 문자열로 설정
+                    )
                     .execute();
             
             log.info("Token exchange successful");
@@ -68,6 +70,7 @@ public class AuthService {
             return response;
         } catch (IOException e) {
             log.error("Error authenticating with Google: {}", e.getMessage(), e);
+            log.error("Error details: ", e);
             throw new RuntimeException("Failed to authenticate with Google", e);
         }
     }
@@ -84,6 +87,10 @@ public class AuthService {
     @Profile({"dev", "local"})
     public TokenResponse authenticateForTest(String email, String name) {
         log.info("Test authentication for user: {}", email);
+        log.info("Starting Google authentication process");
+        log.debug("Using client ID: {}", clientId);
+        log.debug("Using redirect URI: {}", redirectUri);
+    
         return oAuth2AuthenticationService.authenticateUser(email, name);
     }
 } 
