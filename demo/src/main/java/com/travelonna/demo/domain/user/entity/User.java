@@ -1,15 +1,14 @@
 package com.travelonna.demo.domain.user.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
+
+import java.security.AuthProvider;
 
 @Entity
 @Table(name = "user")
 @Getter
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
 public class User {
@@ -25,7 +24,14 @@ public class User {
     @Column(name = "email", nullable = false, unique = true)
     private String email;
 
-    public void updateName(String name) {
+    //고유 식별자를 저장하기 위해서
+    private String providerId;
+
+    //User와 Profile은 1:1 관계설정 하나의 User당 하나의 Profile이 존재
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    private Profile profile;
+
+    public void setName(String name) {
         this.name = name;
     }
 } 
