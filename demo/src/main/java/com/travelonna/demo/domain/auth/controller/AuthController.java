@@ -47,7 +47,7 @@ public class AuthController {
             @Parameter(description = "Google 인증 코드", required = true)
             @Valid @RequestBody GoogleTokenRequest request,
             HttpServletRequest httpRequest) {
-        log.info("Google login request received");
+        log.info("Google login request received from web client");
         log.debug("Code length: {}", request.getCode().length());
         
         // 인증 코드의 일부를 로그에 남김 (보안을 위해 전체 코드는 로그에 남기지 않음)
@@ -70,12 +70,12 @@ public class AuthController {
         }
         
         try {
-            log.info("Calling authenticateWithGoogle method");
+            log.info("Calling authenticateWithGoogle method for web client");
             TokenResponse tokenResponse = authService.authenticateWithGoogle(request.getCode());
-            log.info("Google login successful");
+            log.info("Google login successful for web client");
             return ResponseEntity.ok(tokenResponse);
         } catch (Exception e) {
-            log.error("Error during Google authentication: {}", e.getMessage());
+            log.error("Error during Google authentication for web client: {}", e.getMessage());
             log.error("Error details: ", e);
             
             // 오류 유형에 따라 다른 응답 반환
@@ -87,6 +87,25 @@ public class AuthController {
             
             throw e;
         }
+    }
+
+    // 웹 클라이언트용 Google OAuth 콜백 엔드포인트 추가
+    @GetMapping("/google/callback")
+    public ResponseEntity<String> googleCallback(
+            @RequestParam("code") String code,
+            @RequestParam(value = "state", required = false) String state,
+            HttpServletRequest request) {
+        log.info("Google OAuth callback received");
+        log.debug("Code length: {}", code.length());
+        log.debug("State: {}", state);
+        
+        // 여기서는 실제 인증 처리를 하지 않고, 프론트엔드로 리다이렉트하거나 코드를 반환
+        // 프론트엔드에서 이 코드를 사용하여 /api/auth/google 엔드포인트를 호출해야 함
+        
+        // 실제 구현에서는 프론트엔드 URL로 리다이렉트하는 것이 좋음
+        // 예: return ResponseEntity.status(HttpStatus.FOUND).header("Location", "https://your-frontend-url?code=" + code).build();
+        
+        return ResponseEntity.ok("Authorization code received. Please use this code to complete authentication: " + code);
     }
 
     @Operation(summary = "토큰 갱신", description = "리프레시 토큰을 사용하여 액세스 토큰을 갱신합니다.")
@@ -156,6 +175,19 @@ public class AuthController {
         response.put("receivedPayload", payload);
         
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/oauth-config")
+    public ResponseEntity<Map<String, Object>> getOAuthConfig() {
+        log.info("OAuth configuration request received");
+        
+        Map<String, Object> config = new HashMap<>();
+        config.put("clientIdLength", authService.getClientIdLength());
+        config.put("clientSecretConfigured", authService.isClientSecretConfigured());
+        config.put("redirectUri", authService.getRedirectUri());
+        config.put("timestamp", System.currentTimeMillis());
+        
+        return ResponseEntity.ok(config);
     }
 
     @RequestMapping(value = "/**", method = RequestMethod.OPTIONS)

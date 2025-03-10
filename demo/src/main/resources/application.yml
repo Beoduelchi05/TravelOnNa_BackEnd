@@ -28,7 +28,6 @@ spring:
         registration:
           google:
             client-id: ${google.client-id}
-            # 안드로이드 OAuth2.0 클라이언트는 client_secret이 없음
             redirect-uri: ${google.redirect-uri}
             scope:
               - email

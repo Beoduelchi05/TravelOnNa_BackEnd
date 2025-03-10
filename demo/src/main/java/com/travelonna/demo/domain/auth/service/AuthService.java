@@ -25,6 +25,12 @@ public class AuthService {
 
     @Value("${google.client-id}")
     private String clientId;
+    
+    @Value("${google.client-secret}")
+    private String clientSecret;
+    
+    @Value("${google.redirect-uri}")
+    private String redirectUri;
 
     public TokenResponse authenticateWithGoogle(String authorizationCode) {
         log.info("Starting Google authentication process");
@@ -33,23 +39,29 @@ public class AuthService {
         
         // 인증 코드의 일부를 로그에 남김 (보안을 위해 전체 코드는 로그에 남기지 않음)
         if (authorizationCode != null && authorizationCode.length() > 20) {
-            log.debug("Authorization code preview: {}", authorizationCode);
+            String firstPart = authorizationCode.substring(0, 10);
+            String lastPart = authorizationCode.substring(authorizationCode.length() - 10);
+            log.debug("Authorization code preview: {}...{}", firstPart, lastPart);
         } else if (authorizationCode != null) {
             log.debug("Authorization code is too short to preview safely");
         }
         
         try {
             log.info("Exchanging authorization code for token");
-            // Google로부터 토큰 받기 (안드로이드 클라이언트는 client_secret이 없음)
-            // 안드로이드 앱용 클라이언트 ID를 사용할 때는 리디렉션 URI를 빈 문자열로 설정
+            log.debug("Using client ID: {}", clientId);
+            log.debug("Using client secret: {}", clientSecret != null ? "설정됨" : "설정되지 않음");
+            log.debug("Using redirect URI: {}", redirectUri);
+            
+            // Google로부터 토큰 받기 (웹 클라이언트용)
+            // 웹 클라이언트 ID를 사용할 때는 client_secret이 필요함
             GoogleTokenResponse tokenResponse = new GoogleAuthorizationCodeTokenRequest(
                     new NetHttpTransport(),                // HTTP 전송 방식
                     GsonFactory.getDefaultInstance(),      // JSON 파서
                     "https://oauth2.googleapis.com/token", // Google OAuth 토큰 엔드포인트
                     clientId,                              // 클라이언트 ID
-                    "",                                    // 클라이언트 시크릿 (안드로이드는 빈 문자열)
+                    clientSecret,                          // 클라이언트 시크릿
                     authorizationCode,                     // 인증 코드
-                    ""                                     // 리디렉션 URI (빈 문자열)
+                    redirectUri                            // 리디렉션 URI (설정 파일에서 가져옴)
                     )
                     .execute();
             
@@ -84,11 +96,11 @@ public class AuthService {
                 log.error("3. The client ID or client secret is incorrect");
                 log.error("4. The redirect URI doesn't match the one used to get the authorization code");
                 
-                // 안드로이드 앱용 클라이언트 ID 사용 시 주의사항
-                log.error("For Android client IDs, make sure:");
-                log.error("1. You're using the correct client ID from Google Developer Console");
+                // 웹 클라이언트 ID 사용 시 주의사항
+                log.error("For Web client IDs, make sure:");
+                log.error("1. You're using the correct client ID and client secret from Google Developer Console");
                 log.error("2. The authorization code is fresh and hasn't been used before");
-                log.error("3. You're using an empty string for redirect URI, not null");
+                log.error("3. The redirect URI exactly matches the one configured in Google Developer Console");
             }
             
             throw new RuntimeException("Failed to authenticate with Google", e);
@@ -110,5 +122,27 @@ public class AuthService {
         log.info("Starting Google authentication process");
     
         return oAuth2AuthenticationService.authenticateUser(email, name);
+    }
+
+    /**
+     * 클라이언트 ID의 길이를 반환합니다.
+     * 보안상의 이유로 실제 ID는 노출하지 않습니다.
+     */
+    public int getClientIdLength() {
+        return clientId != null ? clientId.length() : 0;
+    }
+
+    /**
+     * 클라이언트 시크릿이 설정되었는지 확인합니다.
+     */
+    public boolean isClientSecretConfigured() {
+        return clientSecret != null && !clientSecret.isEmpty();
+    }
+    
+    /**
+     * 리디렉션 URI를 반환합니다.
+     */
+    public String getRedirectUri() {
+        return redirectUri;
     }
 } 
