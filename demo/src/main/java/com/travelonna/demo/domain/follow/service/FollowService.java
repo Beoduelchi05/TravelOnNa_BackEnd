@@ -165,11 +165,14 @@ public class FollowService {
         }
         
         try {
-            // 프로필 확인 (존재하는지만 확인)
-            profileService.getProfileById(profileId);
+            // 프로필 ID로 사용자 ID 조회
+            Profile profile = profileService.getProfileById(profileId);
+            Integer userId = profile.getUserId();
             
-            // 해당 프로필을 팔로우하는 모든 사용자 목록 조회
-            List<Follow> followers = followRepository.findAllByToUser(profileId);
+            log.info("프로필 ID: {}의 사용자 ID: {}에 대한 팔로워 목록을 조회합니다", profileId, userId);
+            
+            // 해당 사용자를 팔로우하는 모든 사용자 목록 조회
+            List<Follow> followers = followRepository.findAllByToUser(userId);
             
             return followers.stream()
                     .map(follow -> {
@@ -227,6 +230,8 @@ public class FollowService {
     
     /**
      * 프로필의 팔로워 수 조회
+     * @param profileId 조회할 프로필 ID
+     * @return 팔로워 수
      */
     @Transactional(readOnly = true)
     public long countProfileFollowers(Integer profileId) {
@@ -237,11 +242,14 @@ public class FollowService {
         }
         
         try {
-            // 프로필 확인 (존재하는지만 확인)
-            profileService.getProfileById(profileId);
+            // 프로필 ID로 사용자 ID 조회
+            Profile profile = profileService.getProfileById(profileId);
+            Integer userId = profile.getUserId();
             
-            // 해당 프로필을 팔로우하는 사용자 수 조회
-            return followRepository.countByToUser(profileId);
+            log.info("프로필 ID: {}의 사용자 ID: {}에 대한 팔로워 수를 조회합니다", profileId, userId);
+            
+            // 해당 사용자를 팔로우하는 수 조회
+            return followRepository.countByToUser(userId);
         } catch (Exception e) {
             log.error("팔로워 수 조회 중 오류가 발생했습니다: {}", e.getMessage(), e);
             throw new RuntimeException("팔로워 수 조회 중 오류가 발생했습니다: " + e.getMessage());
@@ -249,22 +257,75 @@ public class FollowService {
     }
     
     /**
-     * 사용자의 팔로잉 수 조회
+     * 프로필의 팔로잉 수 조회
+     * @param profileId 조회할 프로필 ID
+     * @return 팔로잉 수
      */
     @Transactional(readOnly = true)
-    public long countUserFollowings(Integer userId) {
+    public long countProfileFollowings(Integer profileId) {
         // 입력값 검증
-        if (userId == null) {
-            log.error("사용자 ID가 null입니다.");
-            throw new IllegalArgumentException("사용자 ID가 null입니다.");
+        if (profileId == null) {
+            log.error("프로필 ID가 null입니다.");
+            throw new IllegalArgumentException("프로필 ID가 null입니다.");
         }
         
         try {
-            // 해당 사용자가 팔로우하는 프로필 수 조회
+            // 프로필 ID로 사용자 ID 조회
+            Profile profile = profileService.getProfileById(profileId);
+            Integer userId = profile.getUserId();
+            
+            log.info("프로필 ID: {}의 사용자 ID: {}에 대한 팔로잉 수를 조회합니다", profileId, userId);
+            
+            // 해당 사용자가 팔로우하는 수 조회
             return followRepository.countByFromUser(userId);
         } catch (Exception e) {
             log.error("팔로잉 수 조회 중 오류가 발생했습니다: {}", e.getMessage(), e);
             throw new RuntimeException("팔로잉 수 조회 중 오류가 발생했습니다: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 프로필의 팔로잉 목록 조회
+     * @param profileId 조회할 프로필 ID
+     * @param currentUserId 현재 로그인한 사용자 ID
+     * @return 팔로잉 목록
+     */
+    @Transactional(readOnly = true)
+    public List<FollowResponseDto> getProfileFollowings(Integer profileId, Integer currentUserId) {
+        log.info("프로필 ID: {}의 팔로잉 목록을 조회합니다", profileId);
+        
+        // 입력값 검증
+        if (profileId == null) {
+            log.error("프로필 ID가 null입니다.");
+            throw new IllegalArgumentException("프로필 ID가 null입니다.");
+        }
+        
+        try {
+            // 프로필 ID로 사용자 ID 조회
+            Profile profile = profileService.getProfileById(profileId);
+            Integer userId = profile.getUserId();
+            
+            log.info("프로필 ID: {}의 사용자 ID: {}에 대한 팔로잉 목록을 조회합니다", profileId, userId);
+            
+            // 해당 사용자가 팔로우하는 모든 프로필 목록 조회
+            List<Follow> followings = followRepository.findAllByFromUser(userId);
+            
+            return followings.stream()
+                    .map(follow -> {
+                        boolean isFollowing = false;
+                        if (currentUserId != null && currentUserId.equals(userId)) {
+                            // 자신의 팔로잉 목록을 조회하는 경우 항상 true
+                            isFollowing = true;
+                        } else if (currentUserId != null) {
+                            // 현재 로그인한 사용자가 이 팔로잉 대상을 팔로우하고 있는지 확인
+                            isFollowing = followRepository.findByFromUserAndToUser(currentUserId, follow.getToUser()).isPresent();
+                        }
+                        return FollowResponseDto.fromEntity(follow, isFollowing);
+                    })
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.error("팔로잉 목록 조회 중 오류가 발생했습니다: {}", e.getMessage(), e);
+            throw new RuntimeException("팔로잉 목록 조회 중 오류가 발생했습니다: " + e.getMessage());
         }
     }
 } 

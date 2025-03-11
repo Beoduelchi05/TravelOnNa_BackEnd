@@ -100,31 +100,31 @@ public class FollowController {
     @GetMapping("/followers/{profileId}")
     public ResponseEntity<ApiResponse<List<FollowResponseDto>>> getProfileFollowers(
             @AuthenticationPrincipal UserDetails userDetails,
-            @RequestParam(required = false) Integer currentUser,
+            @RequestParam(required = false) Integer currentUserId,
             @PathVariable Integer profileId) {
         
-        // 인증 정보가 있으면 사용하고, 없으면 요청 파라미터의 currentUser 사용
-        Integer currentUserId = userDetails != null ? 
+        // 인증 정보가 있으면 사용하고, 없으면 요청 파라미터의 currentUserId 사용
+        Integer loggedInUserId = userDetails != null ? 
                 Integer.parseInt(userDetails.getUsername()) : 
-                currentUser;
+                currentUserId;
         
-        List<FollowResponseDto> followers = followService.getProfileFollowers(profileId, currentUserId);
+        List<FollowResponseDto> followers = followService.getProfileFollowers(profileId, loggedInUserId);
         return ResponseEntity.ok(ApiResponse.success("팔로워 목록 조회에 성공했습니다.", followers));
     }
 
-    @Operation(summary = "사용자 팔로잉 목록 조회", description = "특정 사용자의 팔로잉 목록을 조회합니다.")
-    @GetMapping("/followings/{userId}")
-    public ResponseEntity<ApiResponse<List<FollowResponseDto>>> getUserFollowings(
+    @Operation(summary = "프로필 팔로잉 목록 조회", description = "특정 프로필의 팔로잉 목록을 조회합니다.")
+    @GetMapping("/followings/{profileId}")
+    public ResponseEntity<ApiResponse<List<FollowResponseDto>>> getProfileFollowings(
             @AuthenticationPrincipal UserDetails userDetails,
-            @RequestParam(required = false) Integer currentUser,
-            @PathVariable Integer userId) {
+            @RequestParam(required = false) Integer currentUserId,
+            @PathVariable Integer profileId) {
         
-        // 인증 정보가 있으면 사용하고, 없으면 요청 파라미터의 currentUser 사용
-        Integer currentUserId = userDetails != null ? 
+        // 인증 정보가 있으면 사용하고, 없으면 요청 파라미터의 currentUserId 사용
+        Integer loggedInUserId = userDetails != null ? 
                 Integer.parseInt(userDetails.getUsername()) : 
-                currentUser;
+                currentUserId;
         
-        List<FollowResponseDto> followings = followService.getUserFollowings(userId, currentUserId);
+        List<FollowResponseDto> followings = followService.getProfileFollowings(profileId, loggedInUserId);
         return ResponseEntity.ok(ApiResponse.success("팔로잉 목록 조회에 성공했습니다.", followings));
     }
 
@@ -137,12 +137,12 @@ public class FollowController {
         return ResponseEntity.ok(ApiResponse.success("팔로워 수 조회에 성공했습니다.", Map.of("count", count)));
     }
 
-    @Operation(summary = "사용자 팔로잉 수 조회", description = "특정 사용자의 팔로잉 수를 조회합니다.")
-    @GetMapping("/count/followings/{userId}")
-    public ResponseEntity<ApiResponse<Map<String, Long>>> countUserFollowings(
-            @PathVariable Integer userId) {
+    @Operation(summary = "프로필 팔로잉 수 조회", description = "특정 프로필의 팔로잉 수를 조회합니다.")
+    @GetMapping("/count/followings/{profileId}")
+    public ResponseEntity<ApiResponse<Map<String, Long>>> countProfileFollowings(
+            @PathVariable Integer profileId) {
         
-        long count = followService.countUserFollowings(userId);
+        long count = followService.countProfileFollowings(profileId);
         return ResponseEntity.ok(ApiResponse.success("팔로잉 수 조회에 성공했습니다.", Map.of("count", count)));
     }
 } 
