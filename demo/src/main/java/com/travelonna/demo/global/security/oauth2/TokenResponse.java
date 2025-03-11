@@ -14,4 +14,5 @@ public class TokenResponse {
     private String refreshToken;
     private String tokenType;
     private int expiresIn;
+    private Integer user_id;
 } 

@@ -9,5 +9,5 @@ public class TravelonnaApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(TravelonnaApplication.class, args);
 	}
-
+	
 }

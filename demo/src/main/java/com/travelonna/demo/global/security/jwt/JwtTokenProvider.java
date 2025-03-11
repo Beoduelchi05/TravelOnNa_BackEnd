@@ -42,12 +42,33 @@ public class JwtTokenProvider {
         return createToken(email, refreshTokenValidityInMilliseconds);
     }
 
+    public String createAccessToken(String email, Integer userId) {
+        return createToken(email, userId, accessTokenValidityInMilliseconds);
+    }
+
+    public String createRefreshToken(String email, Integer userId) {
+        return createToken(email, userId, refreshTokenValidityInMilliseconds);
+    }
+
     private String createToken(String email, long validityInMilliseconds) {
         Date now = new Date();
         Date validity = new Date(now.getTime() + validityInMilliseconds);
 
         return Jwts.builder()
                 .setSubject(email)
+                .setIssuedAt(now)
+                .setExpiration(validity)
+                .signWith(key, SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    private String createToken(String email, Integer userId, long validityInMilliseconds) {
+        Date now = new Date();
+        Date validity = new Date(now.getTime() + validityInMilliseconds);
+
+        return Jwts.builder()
+                .setSubject(email)
+                .claim("user_id", userId)
                 .setIssuedAt(now)
                 .setExpiration(validity)
                 .signWith(key, SignatureAlgorithm.HS256)
@@ -86,5 +107,15 @@ public class JwtTokenProvider {
                 .parseClaimsJws(token)
                 .getBody()
                 .getSubject();
+    }
+
+    public Integer getUserIdFromToken(String token) {
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+        
+        return claims.get("user_id", Integer.class);
     }
 } 
