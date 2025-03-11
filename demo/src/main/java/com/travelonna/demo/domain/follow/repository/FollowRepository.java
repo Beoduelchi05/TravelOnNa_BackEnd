@@ -11,13 +11,13 @@ import com.travelonna.demo.domain.follow.entity.Follow;
 @Repository
 public interface FollowRepository extends JpaRepository<Follow, Integer> {
     
-    // 특정 사용자가 팔로우하는 모든 사용자 목록 조회
+    // 특정 사용자가 팔로우하는 모든 관계 조회
     List<Follow> findAllByFromUser(Integer fromUser);
     
-    // 특정 사용자를 팔로우하는 모든 사용자 목록 조회
+    // 특정 사용자를 팔로우하는 모든 관계 조회
     List<Follow> findAllByToUser(Integer toUser);
     
-    // 특정 프로필을 팔로우하는 모든 사용자 목록 조회
+    // 특정 프로필을 팔로우하는 모든 관계 조회
     List<Follow> findAllByProfileId(Integer profileId);
     
     // 특정 사용자가 특정 사용자를 팔로우하는지 확인
@@ -26,18 +26,18 @@ public interface FollowRepository extends JpaRepository<Follow, Integer> {
     // 특정 사용자가 특정 프로필을 팔로우하는지 확인
     Optional<Follow> findByFromUserAndProfileId(Integer fromUser, Integer profileId);
     
-    // 팔로우 관계 삭제
+    // 특정 사용자가 특정 사용자를 팔로우하는 관계 삭제
     void deleteByFromUserAndToUser(Integer fromUser, Integer toUser);
     
-    // 프로필 기반 팔로우 관계 삭제
+    // 특정 사용자가 특정 프로필을 팔로우하는 관계 삭제
     void deleteByFromUserAndProfileId(Integer fromUser, Integer profileId);
     
-    // 팔로워 수 카운트
+    // 특정 사용자를 팔로우하는 수 카운트
     long countByToUser(Integer toUser);
     
-    // 팔로잉 수 카운트
+    // 특정 사용자가 팔로우하는 수 카운트
     long countByFromUser(Integer fromUser);
     
-    // 프로필 팔로워 수 카운트
+    // 특정 프로필을 팔로우하는 수 카운트
     long countByProfileId(Integer profileId);
 } 
