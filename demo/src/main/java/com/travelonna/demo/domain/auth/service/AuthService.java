@@ -1,5 +1,11 @@
 package com.travelonna.demo.domain.auth.service;
 
+import java.io.IOException;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
+import org.springframework.stereotype.Service;
+
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeTokenRequest;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
@@ -7,14 +13,9 @@ import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 import com.travelonna.demo.global.security.oauth2.OAuth2AuthenticationService;
 import com.travelonna.demo.global.security.oauth2.TokenResponse;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Profile;
-import org.springframework.stereotype.Service;
-
-import java.io.IOException;
-import java.security.GeneralSecurityException;
 
 @Slf4j
 @Service
@@ -144,5 +145,47 @@ public class AuthService {
      */
     public String getRedirectUri() {
         return redirectUri;
+    }
+
+    /**
+     * Google OAuth 인증 URL을 생성합니다.
+     * 이 URL로 사용자를 리다이렉트하면 Google 로그인 페이지가 표시됩니다.
+     */
+    public String createGoogleAuthorizationUrl() {
+        log.info("Creating Google authorization URL");
+        
+        // Google OAuth 2.0 인증 엔드포인트
+        String baseUrl = "https://accounts.google.com/o/oauth2/v2/auth";
+        
+        // 필수 파라미터
+        String responseType = "code";
+        String scope = "email profile";
+        
+        // CSRF 공격 방지를 위한 상태 파라미터 생성
+        String state = generateRandomState();
+        
+        // URL 생성
+        StringBuilder urlBuilder = new StringBuilder(baseUrl);
+        urlBuilder.append("?client_id=").append(clientId);
+        urlBuilder.append("&redirect_uri=").append(redirectUri);
+        urlBuilder.append("&response_type=").append(responseType);
+        urlBuilder.append("&scope=").append(scope);
+        urlBuilder.append("&state=").append(state); // 상태 파라미터 추가
+        urlBuilder.append("&access_type=offline"); // 리프레시 토큰을 받기 위해 필요
+        urlBuilder.append("&prompt=consent"); // 항상 동의 화면 표시
+        
+        String authUrl = urlBuilder.toString();
+        log.debug("Generated Google authorization URL: {}", authUrl);
+        
+        return authUrl;
+    }
+
+    /**
+     * CSRF 공격 방지를 위한 랜덤 상태 문자열을 생성합니다.
+     */
+    private String generateRandomState() {
+        byte[] randomBytes = new byte[32];
+        new java.security.SecureRandom().nextBytes(randomBytes);
+        return java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
     }
 } 

@@ -1,10 +1,27 @@
 package com.travelonna.demo.domain.auth.controller;
 
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.springframework.context.annotation.Profile;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.travelonna.demo.domain.auth.dto.GoogleTokenRequest;
 import com.travelonna.demo.domain.auth.dto.RefreshTokenRequest;
 import com.travelonna.demo.domain.auth.dto.TestLoginRequest;
 import com.travelonna.demo.domain.auth.service.AuthService;
 import com.travelonna.demo.global.security.oauth2.TokenResponse;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -12,18 +29,11 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Profile;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.Valid;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Map;
 
 @Slf4j
 @RestController
@@ -188,6 +198,43 @@ public class AuthController {
         config.put("timestamp", System.currentTimeMillis());
         
         return ResponseEntity.ok(config);
+    }
+
+    @Operation(summary = "Google 로그인 페이지", description = "Google OAuth2.0 로그인 페이지로 리다이렉트하거나 로그인 URL을 반환합니다.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "302", description = "Google 로그인 페이지로 리다이렉트"),
+        @ApiResponse(responseCode = "200", description = "Google 로그인 URL 반환"),
+        @ApiResponse(responseCode = "500", description = "서버 오류")
+    })
+    @GetMapping("/google")
+    public ResponseEntity<?> googleLoginRedirect(
+            @RequestParam(value = "redirect", defaultValue = "true") boolean redirect,
+            HttpServletResponse response) {
+        log.info("Google login request received, redirect={}", redirect);
+        
+        try {
+            // Google OAuth 로그인 URL 생성
+            String googleAuthUrl = authService.createGoogleAuthorizationUrl();
+            
+            if (redirect) {
+                // 리다이렉트 응답 생성
+                log.info("Redirecting to Google login page");
+                response.sendRedirect(googleAuthUrl);
+                return ResponseEntity.status(HttpStatus.FOUND).build();
+            } else {
+                // JSON 응답 생성
+                log.info("Returning Google login URL");
+                Map<String, Object> responseBody = new HashMap<>();
+                responseBody.put("loginUrl", googleAuthUrl);
+                responseBody.put("message", "Use this URL to login with Google");
+                responseBody.put("timestamp", System.currentTimeMillis());
+                return ResponseEntity.ok(responseBody);
+            }
+        } catch (Exception e) {
+            log.error("Error creating Google authorization URL: {}", e.getMessage());
+            log.error("Error details: ", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
     @RequestMapping(value = "/**", method = RequestMethod.OPTIONS)
