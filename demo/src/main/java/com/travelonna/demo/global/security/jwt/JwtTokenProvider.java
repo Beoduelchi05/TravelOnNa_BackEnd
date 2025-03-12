@@ -1,13 +1,11 @@
 package com.travelonna.demo.global.security.jwt;
 
 import java.security.Key;
-import java.util.Collections;
 import java.util.Date;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Component;
 
 import io.jsonwebtoken.Claims;
@@ -83,10 +81,15 @@ public class JwtTokenProvider {
                 .getBody();
 
         String email = claims.getSubject();
+        Integer userId = claims.get("user_id", Integer.class);
+        
+        // JwtUserDetails 객체 생성
+        JwtUserDetails userDetails = new JwtUserDetails(email, userId);
+        
         return new UsernamePasswordAuthenticationToken(
-                email,
+                userDetails,
                 null,
-                Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))
+                userDetails.getAuthorities()
         );
     }
 

@@ -11,6 +11,7 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -37,6 +38,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity // 메소드 수준 보안 활성화
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -54,10 +56,7 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/profiles/**").permitAll()
-                .requestMatchers("/api/follows/**").permitAll()
-                .requestMatchers("/api/test/**").permitAll()
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // OPTIONS 요청 허용
+                // 인증 관련 API 및 Swagger UI는 모든 사용자에게 허용
                 .requestMatchers("/api/auth/**").permitAll() // 인증 관련 API 허용
                 .requestMatchers("/oauth2/**").permitAll()
                 .requestMatchers("/swagger-ui/**").permitAll()
@@ -65,6 +64,8 @@ public class SecurityConfig {
                 .requestMatchers("/api-docs/**").permitAll()
                 .requestMatchers("/v3/api-docs/**").permitAll()
                 .requestMatchers("/error").permitAll() // 오류 페이지 허용
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // OPTIONS 요청 허용
+                // 나머지 모든 요청은 인증 필요
                 .anyRequest().authenticated()
             )
             .exceptionHandling(exceptions -> exceptions
@@ -118,8 +119,9 @@ public class SecurityConfig {
                 log.error("Header - {}: {}", headerName, request.getHeader(headerName));
             }
             
-            response.setStatus(HttpStatus.FORBIDDEN.value());
-            response.getWriter().write("Authentication failed: " + authException.getMessage());
+            response.setStatus(HttpStatus.UNAUTHORIZED.value()); // 401 Unauthorized로 변경
+            response.setContentType("application/json;charset=UTF-8");
+            response.getWriter().write("{\"error\":\"인증이 필요합니다. 로그인 후 이용해주세요.\",\"status\":401}");
         }
     }
     
