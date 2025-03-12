@@ -16,6 +16,7 @@ import com.travelonna.demo.domain.user.service.ProfileService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -51,7 +52,7 @@ public class ProfileController {
     })
     @PostMapping
     public ResponseEntity<ProfileResponse> createProfile(
-            @Parameter(description = "프로필 생성 정보", required = true) 
+            @Parameter(description = "프로필 생성 정보", required = true, schema = @Schema(implementation = ProfileRequest.class)) 
             @RequestBody ProfileRequest request) {
         try {
             Profile profile = profileService.createProfile(
@@ -82,8 +83,8 @@ public class ProfileController {
     })
     @GetMapping("/user/{userId}")
     public ResponseEntity<ProfileResponse> getProfileByUserId(
-            @Parameter(description = "조회할 사용자 ID", required = true) 
-            @PathVariable Integer userId) {
+            @Parameter(name = "userId", description = "조회할 사용자 ID", required = true, example = "6", in = ParameterIn.PATH) 
+            @PathVariable("userId") Integer userId) {
         try {
             Profile profile = profileService.getProfileByUserId(userId);
             return ResponseEntity.ok(convertToResponse(profile));
@@ -108,8 +109,8 @@ public class ProfileController {
     })
     @GetMapping("/{profileId}")
     public ResponseEntity<ProfileResponse> getProfile(
-            @Parameter(description = "조회할 프로필 ID", required = true) 
-            @PathVariable Integer profileId) {
+            @Parameter(name = "profileId", description = "조회할 프로필 ID", required = true, example = "6", in = ParameterIn.PATH) 
+            @PathVariable("profileId") Integer profileId) {
         try {
             Profile profile = profileService.getProfileById(profileId);
             return ResponseEntity.ok(convertToResponse(profile));
@@ -135,9 +136,9 @@ public class ProfileController {
     })
     @PutMapping("/{profileId}")
     public ResponseEntity<ProfileResponse> updateProfile(
-            @Parameter(description = "수정할 프로필 ID", required = true) 
-            @PathVariable Integer profileId,
-            @Parameter(description = "수정할 프로필 정보", required = true) 
+            @Parameter(name = "profileId", description = "수정할 프로필 ID", required = true, example = "6", in = ParameterIn.PATH) 
+            @PathVariable("profileId") Integer profileId,
+            @Parameter(description = "수정할 프로필 정보", required = true, schema = @Schema(implementation = ProfileRequest.class)) 
             @RequestBody ProfileRequest request) {
         try {
             Profile profile = profileService.updateProfile(

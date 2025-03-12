@@ -23,6 +23,10 @@ import com.travelonna.demo.global.common.ApiResponse;
 import com.travelonna.demo.global.security.jwt.JwtUserDetails;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -55,8 +59,13 @@ public class FollowController {
     }
 
     @Operation(summary = "프로필 팔로우", description = "특정 프로필을 팔로우합니다. 로그인이 필요한 기능입니다.")
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "팔로우 성공"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패")
+    })
     @PostMapping
     public ResponseEntity<ApiResponse<FollowResponseDto>> followProfile(
+            @Parameter(description = "팔로우 요청 정보", required = true, schema = @Schema(implementation = FollowRequestDto.class))
             @RequestBody FollowRequestDto requestDto) {
         
         Integer fromUser = getCurrentUserId();
@@ -77,9 +86,14 @@ public class FollowController {
     }
 
     @Operation(summary = "프로필 언팔로우", description = "특정 프로필을 언팔로우합니다. 로그인이 필요한 기능입니다.")
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "언팔로우 성공"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패")
+    })
     @DeleteMapping("/{toUser}")
     public ResponseEntity<ApiResponse<Void>> unfollowProfile(
-            @PathVariable Integer toUser) {
+            @Parameter(name = "toUser", description = "언팔로우할 사용자 ID", required = true, example = "10", in = ParameterIn.PATH)
+            @PathVariable("toUser") Integer toUser) {
         
         Integer fromUser = getCurrentUserId();
         
@@ -97,9 +111,14 @@ public class FollowController {
     }
 
     @Operation(summary = "팔로우 상태 확인", description = "특정 프로필에 대한 팔로우 상태를 확인합니다. 로그인이 필요한 기능입니다.")
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "팔로우 상태 확인 성공"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패")
+    })
     @GetMapping("/status/{toUser}")
     public ResponseEntity<ApiResponse<Map<String, Boolean>>> checkFollowStatus(
-            @PathVariable Integer toUser) {
+            @Parameter(name = "toUser", description = "팔로우 상태를 확인할 사용자 ID", required = true, example = "10", in = ParameterIn.PATH)
+            @PathVariable("toUser") Integer toUser) {
         
         Integer fromUser = getCurrentUserId();
         
@@ -117,9 +136,14 @@ public class FollowController {
     }
 
     @Operation(summary = "프로필 팔로워 목록 조회", description = "특정 프로필의 팔로워 목록을 조회합니다. 로그인이 필요한 기능입니다.")
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "팔로워 목록 조회 성공"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패")
+    })
     @GetMapping("/followers/{profileId}")
     public ResponseEntity<ApiResponse<List<FollowResponseDto>>> getProfileFollowers(
-            @PathVariable Integer profileId) {
+            @Parameter(name = "profileId", description = "팔로워 목록을 조회할 프로필 ID", required = true, example = "6", in = ParameterIn.PATH)
+            @PathVariable("profileId") Integer profileId) {
         
         Integer loggedInUserId = getCurrentUserId();
         
@@ -134,9 +158,14 @@ public class FollowController {
     }
 
     @Operation(summary = "프로필 팔로잉 목록 조회", description = "특정 프로필의 팔로잉 목록을 조회합니다. 로그인이 필요한 기능입니다.")
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "팔로잉 목록 조회 성공"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패")
+    })
     @GetMapping("/followings/{profileId}")
     public ResponseEntity<ApiResponse<List<FollowResponseDto>>> getProfileFollowings(
-            @PathVariable Integer profileId) {
+            @Parameter(name = "profileId", description = "팔로잉 목록을 조회할 프로필 ID", required = true, example = "6", in = ParameterIn.PATH)
+            @PathVariable("profileId") Integer profileId) {
         
         Integer loggedInUserId = getCurrentUserId();
         
@@ -151,9 +180,14 @@ public class FollowController {
     }
 
     @Operation(summary = "프로필 팔로워 수 조회", description = "특정 프로필의 팔로워 수를 조회합니다. 로그인이 필요한 기능입니다.")
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "팔로워 수 조회 성공"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패")
+    })
     @GetMapping("/count/followers/{profileId}")
     public ResponseEntity<ApiResponse<Map<String, Long>>> countProfileFollowers(
-            @PathVariable Integer profileId) {
+            @Parameter(name = "profileId", description = "팔로워 수를 조회할 프로필 ID", required = true, example = "6", in = ParameterIn.PATH)
+            @PathVariable("profileId") Integer profileId) {
         
         Integer loggedInUserId = getCurrentUserId();
         
@@ -168,9 +202,14 @@ public class FollowController {
     }
 
     @Operation(summary = "프로필 팔로잉 수 조회", description = "특정 프로필의 팔로잉 수를 조회합니다. 로그인이 필요한 기능입니다.")
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "팔로잉 수 조회 성공"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패")
+    })
     @GetMapping("/count/followings/{profileId}")
     public ResponseEntity<ApiResponse<Map<String, Long>>> countProfileFollowings(
-            @PathVariable Integer profileId) {
+            @Parameter(name = "profileId", description = "팔로잉 수를 조회할 프로필 ID", required = true, example = "6", in = ParameterIn.PATH)
+            @PathVariable("profileId") Integer profileId) {
         
         Integer loggedInUserId = getCurrentUserId();
         
