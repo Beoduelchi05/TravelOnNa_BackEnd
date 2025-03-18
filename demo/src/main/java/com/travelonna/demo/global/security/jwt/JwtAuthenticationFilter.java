@@ -23,20 +23,27 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtTokenProvider jwtTokenProvider;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-            throws ServletException, IOException {
-        String token = resolveToken(request);
+protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+        throws ServletException, IOException {
+    String token = resolveToken(request);
+    
+    if (StringUtils.hasText(token) && jwtTokenProvider.validateToken(token)) {
+        Authentication authentication = jwtTokenProvider.getAuthentication(token);
+        SecurityContextHolder.getContext().setAuthentication(authentication);
         
-        if (StringUtils.hasText(token) && jwtTokenProvider.validateToken(token)) {
-            Authentication authentication = jwtTokenProvider.getAuthentication(token);
-            SecurityContextHolder.getContext().setAuthentication(authentication);
-            log.debug("Set Authentication to security context for '{}', uri: {}", authentication.getName(), request.getRequestURI());
-        } else {
-            log.debug("No valid JWT token found, uri: {}", request.getRequestURI());
+        // 인증된 사용자 ID를 요청 속성으로 추가
+        if (authentication.getPrincipal() instanceof JwtUserDetails) {
+            JwtUserDetails userDetails = (JwtUserDetails) authentication.getPrincipal();
+            request.setAttribute("userId", userDetails.getUserId());
         }
         
-        filterChain.doFilter(request, response);
+        log.debug("Set Authentication to security context for '{}', uri: {}", authentication.getName(), request.getRequestURI());
+    } else {
+        log.debug("No valid JWT token found, uri: {}", request.getRequestURI());
     }
+    
+    filterChain.doFilter(request, response);
+}
 
     private String resolveToken(HttpServletRequest request) {
         String bearerToken = request.getHeader("Authorization");
@@ -46,3 +53,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         return null;
     }
 } 
+
+
+
