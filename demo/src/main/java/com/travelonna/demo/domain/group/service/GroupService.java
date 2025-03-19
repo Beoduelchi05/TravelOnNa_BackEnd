@@ -17,7 +17,9 @@ import com.travelonna.demo.domain.user.entity.User;
 import com.travelonna.demo.domain.user.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class GroupService {
@@ -74,25 +76,38 @@ public class GroupService {
 
     @Transactional
     public void joinGroup(Integer userId, String groupUrl) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        log.debug("Attempting to join group with URL: {} for user ID: {}", groupUrl, userId);
         
-        GroupEntity group = groupRepository.findByUrl(groupUrl)
-                .orElseThrow(() -> new IllegalArgumentException("Group not found with URL: " + groupUrl));
-        
-        // 이미 가입된 멤버인지 확인
-        if (groupMemberRepository.existsByGroupAndUser(group, user)) {
-            throw new IllegalStateException("User is already a member of this group");
+        try {
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
+            log.debug("Found user: {}", user.getEmail());
+            
+            GroupEntity group = groupRepository.findByUrl(groupUrl)
+                    .orElseThrow(() -> new IllegalArgumentException("Group not found with URL: " + groupUrl));
+            log.debug("Found group with ID: {}", group.getId());
+            
+            // 이미 가입된 멤버인지 확인
+            boolean exists = groupMemberRepository.existsByGroupAndUser(group, user);
+            log.debug("User is already a member: {}", exists);
+            
+            if (exists) {
+                throw new IllegalStateException("User is already a member of this group");
+            }
+            
+            GroupMember member = GroupMember.builder()
+                    .group(group)
+                    .user(user)
+                    .joinedAt(LocalDateTime.now())
+                    .isActive(true)
+                    .build();
+            
+            groupMemberRepository.save(member);
+            log.debug("Successfully added user to group");
+        } catch (Exception e) {
+            log.error("Error joining group: {}", e.getMessage(), e);
+            throw e; // 예외를 다시 던져서 원래 처리 흐름을 유지
         }
-        
-        GroupMember member = GroupMember.builder()
-                .group(group)
-                .user(user)
-                .joinedAt(LocalDateTime.now())
-                .isActive(true)
-                .build();
-        
-        groupMemberRepository.save(member);
     }
 
     @Transactional(readOnly = true)

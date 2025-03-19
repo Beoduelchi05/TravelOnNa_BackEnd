@@ -4,12 +4,14 @@ import com.travelonna.demo.domain.group.dto.GroupRequestDto;
 import com.travelonna.demo.domain.group.dto.GroupResponseDto;
 import com.travelonna.demo.domain.group.service.GroupService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/groups")
 @RequiredArgsConstructor
@@ -35,8 +37,15 @@ public class GroupController {
     public ResponseEntity<Void> joinGroup(
             @RequestAttribute("userId") Integer userId,
             @PathVariable String url) {
-        groupService.joinGroup(userId, url);
-        return ResponseEntity.ok().build();
+        log.info("Joining group with URL: {}, user ID: {}", url, userId);
+        try {
+            groupService.joinGroup(userId, url);
+            log.info("Successfully joined group with URL: {}", url);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            log.error("Error joining group: {}", e.getMessage(), e);
+            throw e;
+        }
     }
 
     @GetMapping("/my")
