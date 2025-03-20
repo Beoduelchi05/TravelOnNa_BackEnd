@@ -52,15 +52,16 @@ public class SwaggerConfig {
         SecurityRequirement securityRequirement = new SecurityRequirement().addList("bearerAuth");
 
         // API 그룹 태그 정의
-        Tag authTag = new Tag().name("Auth").description("인증 관련 API (로그인 필요 없음)");
+        Tag authTag = new Tag().name("인증").description("인증 관련 API");
         Tag profileTag = new Tag().name("Profile").description("프로필 관리 API (로그인 필요)");
         Tag followTag = new Tag().name("Follow").description("팔로우 관련 API (로그인 필요)");
+        Tag planTag = new Tag().name("개인 일정").description("개인 일정 관리 API (로그인 필요)");
 
         return new OpenAPI()
                 .info(info)
                 .components(new Components().addSecuritySchemes("bearerAuth", securityScheme))
                 .addSecurityItem(securityRequirement)
-                .tags(Arrays.asList(authTag, profileTag, followTag))
+                .tags(Arrays.asList(authTag, profileTag, followTag, planTag))
                 .externalDocs(new ExternalDocumentation()
                         .description("여행ON나 API 가이드")
                         .url("https://travelonna.com/api-guide"));
