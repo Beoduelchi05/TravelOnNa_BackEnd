@@ -4,7 +4,6 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -18,7 +17,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.travelonna.demo.domain.auth.dto.GoogleTokenRequest;
 import com.travelonna.demo.domain.auth.dto.RefreshTokenRequest;
-import com.travelonna.demo.domain.auth.dto.TestLoginRequest;
 import com.travelonna.demo.domain.auth.service.AuthService;
 import com.travelonna.demo.global.security.oauth2.TokenResponse;
 
@@ -37,15 +35,15 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
-@Tag(name = "인증", description = "인증 관련 API")
+@Tag(name = "인증", description = "인증 관련 API (인증 불필요)")
 @CrossOrigin(origins = "*", allowedHeaders = "*")
 public class AuthController {
 
     private final AuthService authService;
 
-    @Operation(summary = "Google 로그인", description = "Google OAuth2.0 인증 코드를 사용하여 로그인합니다.")
+    @Operation(summary = "Google 로그인", description = "Google OAuth2.0 인증 코드를 사용하여 로그인합니다. (인증 불필요)")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "로그인 성공", 
                     content = @Content(schema = @Schema(implementation = TokenResponse.class))),
@@ -54,8 +52,7 @@ public class AuthController {
     })
     @PostMapping("/google")
     public ResponseEntity<TokenResponse> googleLogin(
-            @Parameter(description = "Google 인증 코드", required = true)
-            @Valid @RequestBody GoogleTokenRequest request,
+            @Parameter(description = "Google 인증 코드") @Valid @RequestBody GoogleTokenRequest request,
             HttpServletRequest httpRequest) {
         log.info("Google login request received from web client");
         log.debug("Code length: {}", request.getCode().length());
@@ -118,7 +115,7 @@ public class AuthController {
         return ResponseEntity.ok("Authorization code received. Please use this code to complete authentication: " + code);
     }
 
-    @Operation(summary = "토큰 갱신", description = "리프레시 토큰을 사용하여 액세스 토큰을 갱신합니다.")
+    @Operation(summary = "토큰 갱신", description = "리프레시 토큰을 사용하여 액세스 토큰을 갱신합니다. (인증 불필요)")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "토큰 갱신 성공", 
                     content = @Content(schema = @Schema(implementation = TokenResponse.class))),
@@ -128,65 +125,13 @@ public class AuthController {
     })
     @PostMapping("/refresh")
     public ResponseEntity<TokenResponse> refreshToken(
-            @Parameter(description = "리프레시 토큰", required = true)
-            @Valid @RequestBody RefreshTokenRequest request) {
+            @Parameter(description = "리프레시 토큰") @Valid @RequestBody RefreshTokenRequest request) {
         log.info("Token refresh request received");
         TokenResponse tokenResponse = authService.refreshToken(request.getRefreshToken());
         return ResponseEntity.ok(tokenResponse);
     }
 
-    @Operation(summary = "테스트용 로그인 (개발 환경 전용)", description = "개발 환경에서만 사용 가능한 테스트용 로그인 API입니다.")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "로그인 성공", 
-                    content = @Content(schema = @Schema(implementation = TokenResponse.class))),
-        @ApiResponse(responseCode = "400", description = "잘못된 요청"),
-        @ApiResponse(responseCode = "500", description = "서버 오류")
-    })
-    @PostMapping("/test-login")
-    @Profile({"dev", "local"}) // 개발 환경에서만 사용 가능
-    public ResponseEntity<TokenResponse> testLogin(
-            @Parameter(description = "테스트 로그인 정보", required = true)
-            @Valid @RequestBody TestLoginRequest request) {
-        log.info("Test login request received for email: {}", request.getEmail());
-        TokenResponse tokenResponse = authService.authenticateForTest(request.getEmail(), request.getName());
-        return ResponseEntity.ok(tokenResponse);
-    }
-
-    @GetMapping("/ping")
-    public ResponseEntity<String> ping() {
-        log.info("Ping request received");
-        return ResponseEntity.ok("pong");
-    }
-    
-    @PostMapping("/debug")
-    public ResponseEntity<Map<String, Object>> debug(@RequestBody(required = false) Map<String, Object> payload, 
-                                                   HttpServletRequest request) {
-        log.info("Debug request received");
-        
-        // 요청 정보 로깅
-        log.info("Request URI: {}", request.getRequestURI());
-        log.info("Request method: {}", request.getMethod());
-        
-        // 헤더 정보 로깅
-        Enumeration<String> headerNames = request.getHeaderNames();
-        while (headerNames.hasMoreElements()) {
-            String headerName = headerNames.nextElement();
-            log.info("Header - {}: {}", headerName, request.getHeader(headerName));
-        }
-        
-        // 요청 본문 로깅
-        log.info("Request payload: {}", payload);
-        
-        // 응답 생성
-        Map<String, Object> response = new HashMap<>();
-        response.put("status", "success");
-        response.put("message", "Debug endpoint called successfully");
-        response.put("timestamp", System.currentTimeMillis());
-        response.put("receivedPayload", payload);
-        
-        return ResponseEntity.ok(response);
-    }
-
+    @Operation(summary = "OAuth 설정 조회", description = "OAuth 관련 설정 정보를 조회합니다. (인증 불필요)")
     @GetMapping("/oauth-config")
     public ResponseEntity<Map<String, Object>> getOAuthConfig() {
         log.info("OAuth configuration request received");
@@ -200,7 +145,7 @@ public class AuthController {
         return ResponseEntity.ok(config);
     }
 
-    @Operation(summary = "Google 로그인 페이지", description = "Google OAuth2.0 로그인 페이지로 리다이렉트하거나 로그인 URL을 반환합니다.")
+    @Operation(summary = "Google 로그인 페이지", description = "Google OAuth2.0 로그인 페이지로 리다이렉트하거나 로그인 URL을 반환합니다. (인증 불필요)")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "302", description = "Google 로그인 페이지로 리다이렉트"),
         @ApiResponse(responseCode = "200", description = "Google 로그인 URL 반환"),
@@ -208,7 +153,7 @@ public class AuthController {
     })
     @GetMapping("/google")
     public ResponseEntity<?> googleLoginRedirect(
-            @RequestParam(value = "redirect", defaultValue = "true") boolean redirect,
+            @Parameter(description = "리다이렉트 여부") @RequestParam(value = "redirect", defaultValue = "true") boolean redirect,
             HttpServletResponse response) {
         log.info("Google login request received, redirect={}", redirect);
         

@@ -34,7 +34,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/follows")
+@RequestMapping("/api/v1/follows")
 @RequiredArgsConstructor
 @Tag(name = "Follow", description = "팔로우 관련 API")
 @SecurityRequirement(name = "bearerAuth") // Swagger UI에 인증 필요 표시

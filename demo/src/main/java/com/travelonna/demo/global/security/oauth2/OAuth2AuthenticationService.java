@@ -25,7 +25,7 @@ public class OAuth2AuthenticationService {
     private final JwtTokenProvider jwtTokenProvider;
 
     @Transactional
-    public TokenResponse authenticateUser(String email, String name) {
+    public TokenResponse authenticateUser(String email, String name, String scope) {
         User user = userService.createOrUpdateUser(email, name);
         
         // 기존 토큰이 있으면 폐기
@@ -45,6 +45,7 @@ public class OAuth2AuthenticationService {
                 .refreshToken(refreshToken)
                 .issuedAt(LocalDateTime.now())
                 .expiresIn(14 * 24 * 60 * 60) // 14일
+                .scope(scope) // scope 설정
                 .revoked(false)
                 .build();
         
@@ -56,6 +57,7 @@ public class OAuth2AuthenticationService {
                 .tokenType("Bearer")
                 .expiresIn(3600) // 1시간
                 .user_id(userId) // user_id 설정
+                .scope(scope) // scope 설정
                 .build();
     }
 
@@ -83,6 +85,7 @@ public class OAuth2AuthenticationService {
                 .tokenType("Bearer")
                 .expiresIn(3600) // 1시간
                 .user_id(userId) // user_id 설정
+                .scope(userToken.getScope()) // 기존 토큰의 scope 설정
                 .build();
     }
 } 

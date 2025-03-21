@@ -15,4 +15,5 @@ public class TokenResponse {
     private String tokenType;
     private int expiresIn;
     private Integer user_id;
+    private String scope;
 } 

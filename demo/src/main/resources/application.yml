@@ -42,11 +42,11 @@ springdoc:
     enabled: true
     tags-sorter: alpha
     operations-sorter: alpha
-    tagsSorter: 인증,Profile,Follow,개인 일정
+    tagsSorter: 인증,Profile,Follow,개인 일정,그룹
   default-consumes-media-type: application/json
   default-produces-media-type: application/json
   paths-to-match:
-    - /api/**
+    - /api/v1/**
 
 # ODSay API 키는 application-secret.yml 파일에 정의되어 있습니다.
 

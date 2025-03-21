@@ -29,7 +29,7 @@ import lombok.RequiredArgsConstructor;
  * 프로필 생성, 조회, 수정 기능을 제공합니다.
  */
 @RestController
-@RequestMapping("/api/profiles")
+@RequestMapping("/api/v1/profiles")
 @RequiredArgsConstructor
 @Tag(name = "Profile", description = "프로필 관리 API")
 public class ProfileController {

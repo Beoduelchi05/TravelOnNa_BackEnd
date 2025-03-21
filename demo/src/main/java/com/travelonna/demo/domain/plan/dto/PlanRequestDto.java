@@ -64,6 +64,18 @@ public class PlanRequestDto {
     @NoArgsConstructor
     @AllArgsConstructor
     @Builder
+    public static class UpdatePeriodDto {
+        @Schema(description = "시작 날짜", example = "2024-04-01")
+        private LocalDate startDate;
+        
+        @Schema(description = "종료 날짜", example = "2024-04-05")
+        private LocalDate endDate;
+    }
+    
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
     public static class UpdateCostDto {
         @Schema(description = "총 비용", example = "500000")
         private Integer totalCost;

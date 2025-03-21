@@ -79,9 +79,13 @@ public class AuthService {
             log.info("User authenticated with Google: email={}", email);
             log.debug("User name: {}", name);
 
+            // scope 정보 추출
+            String scope = tokenResponse.getScope();
+            log.debug("Token scope: {}", scope);
+
             // 사용자 인증 및 JWT 토큰 생성
             log.info("Generating JWT tokens");
-            TokenResponse response = oAuth2AuthenticationService.authenticateUser(email, name);
+            TokenResponse response = oAuth2AuthenticationService.authenticateUser(email, name, scope);
             log.info("JWT tokens generated successfully");
             
             return response;
@@ -122,7 +126,9 @@ public class AuthService {
         log.info("Test authentication for user: {}", email);
         log.info("Starting Google authentication process");
     
-        return oAuth2AuthenticationService.authenticateUser(email, name);
+        // 테스트용 scope 설정
+        String testScope = "email profile";
+        return oAuth2AuthenticationService.authenticateUser(email, name, testScope);
     }
 
     /**

@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.travelonna.demo.domain.plan.dto.PlanRequestDto.CreatePlanDto;
 import com.travelonna.demo.domain.plan.dto.PlanRequestDto.UpdateCostDto;
 import com.travelonna.demo.domain.plan.dto.PlanRequestDto.UpdateLocationDto;
+import com.travelonna.demo.domain.plan.dto.PlanRequestDto.UpdatePeriodDto;
 import com.travelonna.demo.domain.plan.dto.PlanRequestDto.UpdatePlanDto;
 import com.travelonna.demo.domain.plan.dto.PlanRequestDto.UpdateTransportDto;
 import com.travelonna.demo.domain.plan.dto.PlanResponseDto;
@@ -133,7 +134,7 @@ public class PlanService {
     /**
      * 일정 기간 업데이트
      */
-    public PlanResponseDto updatePeriod(Integer userId, Integer planId, UpdatePlanDto requestDto) {
+    public PlanResponseDto updatePeriod(Integer userId, Integer planId, UpdatePeriodDto requestDto) {
         log.info("일정 기간 업데이트: 사용자 ID {}, 일정 ID {}", userId, planId);
         
         Plan plan = getPlanWithPermissionCheck(userId, planId);
