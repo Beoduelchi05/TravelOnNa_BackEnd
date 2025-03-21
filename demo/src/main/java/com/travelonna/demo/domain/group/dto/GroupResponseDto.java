@@ -20,8 +20,8 @@ public class GroupResponseDto {
     @Schema(description = "그룹 고유 URL", example = "a1b2c3d4")
     private String url;
     
-    @Schema(description = "공개 여부", example = "true")
-    private Boolean isPublic;
+    @Schema(description = "그룹 여부", example = "true")
+    private Boolean isGroup;
     
     @Schema(description = "생성 일시", example = "2024-03-21T14:30:00")
     private LocalDateTime createdDate;
@@ -33,7 +33,7 @@ public class GroupResponseDto {
         return GroupResponseDto.builder()
                 .id(entity.getId())
                 .url(entity.getUrl())
-                .isPublic(entity.getIsPublic())
+                .isGroup(entity.getIsGroup())
                 .createdDate(entity.getCreatedDate())
                 .hostId(entity.getHost().getUserId())
                 .build();

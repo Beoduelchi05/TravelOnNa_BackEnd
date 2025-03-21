@@ -26,8 +26,8 @@ public class GroupEntity {
     @Column(name = "url", unique = true)
     private String url;
 
-    @Column(name = "is_public")
-    private Boolean isPublic;
+    @Column(name = "is_group")
+    private Boolean isGroup;
 
     @Column(name = "date")
     private LocalDateTime createdDate;

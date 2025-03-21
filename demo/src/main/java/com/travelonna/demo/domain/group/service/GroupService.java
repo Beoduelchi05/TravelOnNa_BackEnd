@@ -34,7 +34,7 @@ public class GroupService {
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         GroupEntity group = GroupEntity.builder()
-                .isPublic(requestDto.getIsPublic())
+                .isGroup(requestDto.getIsGroup())
                 .createdDate(LocalDateTime.now())
                 .host(host)
                 .build();

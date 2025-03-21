@@ -10,5 +10,5 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class GroupRequestDto {
-    private Boolean isPublic;
+    private Boolean isGroup;
 } 
