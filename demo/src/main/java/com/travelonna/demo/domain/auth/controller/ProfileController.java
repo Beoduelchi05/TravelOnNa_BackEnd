@@ -228,7 +228,8 @@ public class ProfileController {
             profile.getProfileImage(),
             profile.getIntroduction(),
             profile.getCreatedAt(),
-            profile.getUpdatedAt()
+            profile.getUpdatedAt(),
+            null // errorMessage는 null로 설정
         );
     }
 }
