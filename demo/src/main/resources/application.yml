@@ -12,6 +12,13 @@ spring:
     password: ${db.password}
     driver-class-name: com.mysql.cj.jdbc.Driver
     
+  # 파일 업로드 크기 제한 설정
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 10MB
+      enabled: true
+    
   jpa:
     database: mysql
     database-platform: org.hibernate.dialect.MySQLDialect
@@ -61,3 +68,18 @@ logging:
     com.travelonna: DEBUG
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE 
+
+
+# AWS S3 설정
+cloud:
+  aws:
+    s3:
+      bucket: ${aws.s3.bucket}
+    credentials:
+      access-key: ${aws.s3.access-key}
+      secret-key: ${aws.s3.secret-key}
+    region:
+      static: ${aws.s3.region}
+      auto: false
+    stack:
+      auto: false
