@@ -11,9 +11,13 @@ import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.stereotype.Controller;
 
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 @Controller
 @RequiredArgsConstructor
 @Slf4j
+@Tag(name = "그룹 일정", description = "그룹 일정 관리 API (인증 필요)")
 public class GroupPlanWebSocketController {
 
     private final GroupService groupService;
@@ -28,8 +32,8 @@ public class GroupPlanWebSocketController {
     @MessageMapping("/plan/{groupUrl}")
     @SendTo("/topic/plan/{groupUrl}")
     public PlanUpdateMessage sendUpdate(
-            @DestinationVariable String groupUrl,
-            @Payload PlanUpdateMessage message,
+            @Parameter(description = "그룹의 고유 URL", example = "travel-group") @DestinationVariable String groupUrl,
+            @Parameter(description = "계획 업데이트 메시지") @Payload PlanUpdateMessage message,
             SimpMessageHeaderAccessor headerAccessor) {
         
         // 로깅
@@ -62,8 +66,8 @@ public class GroupPlanWebSocketController {
     @MessageMapping("/plan/{groupUrl}/join")
     @SendTo("/topic/plan/{groupUrl}")
     public PlanUpdateMessage addUser(
-            @DestinationVariable String groupUrl,
-            @Payload PlanUpdateMessage message,
+            @Parameter(description = "그룹의 고유 URL", example = "travel-group") @DestinationVariable String groupUrl,
+            @Parameter(description = "접속 메시지") @Payload PlanUpdateMessage message,
             SimpMessageHeaderAccessor headerAccessor) {
         
         // 세션에 사용자 정보 저장

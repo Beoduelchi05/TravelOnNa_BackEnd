@@ -9,6 +9,8 @@ import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 @Component
 @RequiredArgsConstructor
 @Slf4j

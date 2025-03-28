@@ -27,6 +27,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Map;
+
 /**
  * 사용자 프로필 관리를 위한 REST API 컨트롤러
  * 프로필 생성, 조회, 수정 기능을 제공합니다.
@@ -35,7 +37,7 @@ import lombok.extern.slf4j.Slf4j;
 @RestController
 @RequestMapping("/api/v1/profiles")
 @RequiredArgsConstructor
-@Tag(name = "Profile", description = "프로필 관리 API")
+@Tag(name = "Profile", description = "프로필 관리 API (인증 필요)")
 public class ProfileController {
 
     private final ProfileService profileService;
@@ -63,23 +65,20 @@ public class ProfileController {
     })
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ProfileResponse> createProfile(
-            @Parameter(description = "사용자 ID (회원 테이블의 ID, 인증된 사용자의 고유 식별자)", required = true, example = "1")
-            @RequestParam Integer userId,
-            
-            @Parameter(description = "사용자 닉네임 (프로필에 표시될 이름, 중복 불가)", required = true, example = "여행왕")
-            @RequestParam String nickname,
+            @Parameter(description = "프로필 생성 정보", example = "{\n  \"userId\": 1,\n  \"nickname\": \"여행왕\",\n  \"profileImageUrl\": \"https://example.com/images/profile.jpg\",\n  \"introduction\": \"여행을 좋아하는 직장인입니다.\"\n}") 
+            @RequestParam Map<String, Object> profileData,
             
             @Parameter(description = "프로필 이미지 파일 (권장: 320x320px, 최소: 110x110px, 최대 5MB)", required = false)
-            @RequestPart(required = false) MultipartFile profileImage,
-            
-            @Parameter(description = "프로필 이미지 URL (파일 대신 URL로 이미지 제공, 파일과 URL 모두 제공 시 파일이 우선함)", required = false, 
-                      example = "https://example.com/images/profile.jpg")
-            @RequestParam(required = false) String profileImageUrl,
-            
-            @Parameter(description = "자기소개 (프로필 소개글, 최대 255자)", required = false, example = "여행을 좋아하는 직장인입니다.")
-            @RequestParam(required = false) String introduction) {
+            @RequestPart(required = false) MultipartFile profileImage) {
         try {
-            log.info("Creating profile for user: {}, nickname: {}", userId, nickname);
+            log.info("Creating profile with data: {}", profileData);
+            
+            Integer userId = Integer.valueOf(profileData.get("userId").toString());
+            String nickname = profileData.get("nickname").toString();
+            String profileImageUrl = profileData.get("profileImageUrl") != null ? 
+                profileData.get("profileImageUrl").toString() : null;
+            String introduction = profileData.get("introduction") != null ? 
+                profileData.get("introduction").toString() : null;
             
             Profile profile;
             if (profileImage != null && !profileImage.isEmpty()) {
@@ -179,20 +178,19 @@ public class ProfileController {
             @Parameter(name = "profileId", description = "수정할 프로필 ID (프로필 테이블의 ID)", required = true, example = "6", in = ParameterIn.PATH)
             @PathVariable("profileId") Integer profileId,
             
-            @Parameter(description = "수정할 닉네임 (중복 불가, 변경하지 않을 경우 제공하지 않음)", required = false, example = "여행왕")
-            @RequestParam(required = false) String nickname,
+            @Parameter(description = "프로필 수정 정보", example = "{\n  \"nickname\": \"여행왕\",\n  \"profileImageUrl\": \"https://example.com/images/profile.jpg\",\n  \"introduction\": \"여행을 좋아하는 직장인입니다.\"\n}")
+            @RequestParam Map<String, Object> profileData,
             
             @Parameter(description = "수정할 프로필 이미지 파일 (권장: 320x320px, 최소: 110x110px, 최대 5MB)", required = false)
-            @RequestPart(required = false) MultipartFile profileImage,
-            
-            @Parameter(description = "수정할 프로필 이미지 URL (파일 대신 URL로 이미지 제공, 파일과 URL 모두 제공 시 파일이 우선함)", required = false,
-                      example = "https://example.com/images/profile.jpg")
-            @RequestParam(required = false) String profileImageUrl,
-            
-            @Parameter(description = "수정할 자기소개 (프로필 소개글, 최대 255자)", required = false, example = "여행을 좋아하는 직장인입니다.")
-            @RequestParam(required = false) String introduction) {
+            @RequestPart(required = false) MultipartFile profileImage) {
         try {
             log.info("Updating profile for profileId: {}", profileId);
+            
+            String nickname = profileData.get("nickname") != null ? profileData.get("nickname").toString() : null;
+            String profileImageUrl = profileData.get("profileImageUrl") != null ? 
+                profileData.get("profileImageUrl").toString() : null;
+            String introduction = profileData.get("introduction") != null ? 
+                profileData.get("introduction").toString() : null;
             
             Profile profile;
             if (profileImage != null && !profileImage.isEmpty()) {
@@ -229,7 +227,7 @@ public class ProfileController {
             profile.getIntroduction(),
             profile.getCreatedAt(),
             profile.getUpdatedAt(),
-            null // errorMessage는 null로 설정
+            null // 에러 메시지 필드 추가 (null로 설정)
         );
     }
 }

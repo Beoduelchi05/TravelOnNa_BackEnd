@@ -35,9 +35,6 @@ public class PlanRequestDto {
         @Schema(description = "공개 여부", example = "true")
         private Boolean isPublic;
         
-        @Schema(description = "총 비용", example = "500000")
-        private Integer totalCost;
-        
         @Schema(description = "메모", example = "준비물: 수영복, 선글라스")
         private String memo;
     }
@@ -70,15 +67,6 @@ public class PlanRequestDto {
         
         @Schema(description = "종료 날짜", example = "2024-04-05")
         private LocalDate endDate;
-    }
-    
-    @Getter
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Builder
-    public static class UpdateCostDto {
-        @Schema(description = "총 비용", example = "500000")
-        private Integer totalCost;
     }
     
     @Getter
@@ -121,9 +109,6 @@ public class PlanRequestDto {
         
         @Schema(description = "공개 여부", example = "true")
         private Boolean isPublic;
-        
-        @Schema(description = "총 비용", example = "500000")
-        private Integer totalCost;
         
         @Schema(description = "메모", example = "준비물: 수영복, 선글라스")
         private String memo;

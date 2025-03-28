@@ -28,7 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 @RestController
 @RequestMapping("/api/v1/groups")
 @RequiredArgsConstructor
-@Tag(name = "그룹", description = "그룹 관리 API")
+@Tag(name = "그룹", description = "그룹 관리 API (인증 필요)")
 public class GroupController {
 
     private final GroupService groupService;
@@ -41,8 +41,8 @@ public class GroupController {
     })
     @PostMapping
     public ResponseEntity<GroupResponseDto> createGroup(
-            @Parameter(description = "인증된 사용자 ID") @RequestAttribute("userId") Integer userId,
-            @Parameter(description = "생성할 그룹 정보") @RequestBody GroupRequestDto requestDto) {
+            @Parameter(description = "인증된 사용자 ID", example = "1") @RequestAttribute("userId") Integer userId,
+            @Parameter(description = "생성할 그룹 정보", example = "{\n  \"name\": \"서울 여행 모임\",\n  \"description\": \"서울 여행을 함께 계획할 그룹입니다.\",\n  \"isPublic\": true\n}") @RequestBody GroupRequestDto requestDto) {
         GroupResponseDto responseDto = groupService.createGroup(userId, requestDto);
         return ResponseEntity.status(HttpStatus.CREATED).body(responseDto);
     }
@@ -68,7 +68,7 @@ public class GroupController {
     })
     @PostMapping("/join/{url}")
     public ResponseEntity<Void> joinGroup(
-            @Parameter(description = "인증된 사용자 ID") @RequestAttribute("userId") Integer userId,
+            @Parameter(description = "인증된 사용자 ID", example = "1") @RequestAttribute("userId") Integer userId,
             @Parameter(description = "참여할 그룹의 URL", example = "travel-group") @PathVariable String url) {
         log.info("Joining group with URL: {}, user ID: {}", url, userId);
         try {
@@ -88,7 +88,7 @@ public class GroupController {
     })
     @GetMapping("/my")
     public ResponseEntity<List<GroupResponseDto>> getMyGroups(
-            @Parameter(description = "인증된 사용자 ID") @RequestAttribute("userId") Integer userId) {
+            @Parameter(description = "인증된 사용자 ID", example = "1") @RequestAttribute("userId") Integer userId) {
         List<GroupResponseDto> groups = groupService.getMyGroups(userId);
         return ResponseEntity.ok(groups);
     }

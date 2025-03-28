@@ -8,7 +8,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.travelonna.demo.domain.plan.dto.PlanRequestDto.CreatePlanDto;
-import com.travelonna.demo.domain.plan.dto.PlanRequestDto.UpdateCostDto;
 import com.travelonna.demo.domain.plan.dto.PlanRequestDto.UpdateLocationDto;
 import com.travelonna.demo.domain.plan.dto.PlanRequestDto.UpdatePeriodDto;
 import com.travelonna.demo.domain.plan.dto.PlanRequestDto.UpdatePlanDto;
@@ -50,7 +49,7 @@ public class PlanService {
         plan.setTransportInfo(requestDto.getTransportInfo());
         plan.setIsPublic(requestDto.getIsPublic());
         plan.setMemo(requestDto.getMemo());
-        plan.setTotalCost(requestDto.getTotalCost());
+        plan.setTotalCost(0); // 초기 비용은 0으로 설정, 장소 추가 시 자동 계산됨
         
         Plan savedPlan = planRepository.save(plan);
         log.info("개인 일정이 생성되었습니다. ID: {}", savedPlan.getPlanId());
@@ -89,41 +88,26 @@ public class PlanService {
     }
     
     /**
-     * 일정 정보 업데이트
+     * 개인 일정 정보 업데이트
      */
     public PlanResponseDto updatePlan(Integer userId, Integer planId, UpdatePlanDto requestDto) {
         log.info("일정 정보 업데이트: 사용자 ID {}, 일정 ID {}", userId, planId);
         
         Plan plan = getPlanWithPermissionCheck(userId, planId);
         
-        if (requestDto.getTitle() != null) {
-            plan.updateTitle(requestDto.getTitle());
-        }
-        
+        // 새로운 기간이 유효한지 검사
         if (requestDto.getStartDate() != null && requestDto.getEndDate() != null) {
             validatePeriod(requestDto.getStartDate(), requestDto.getEndDate());
-            plan.updatePeriod(requestDto.getStartDate(), requestDto.getEndDate());
         }
         
-        if (requestDto.getLocation() != null) {
-            plan.updateLocation(requestDto.getLocation());
-        }
-        
-        if (requestDto.getTransportInfo() != null) {
-            plan.updateTransport(requestDto.getTransportInfo());
-        }
-        
-        if (requestDto.getIsPublic() != null) {
-            plan.updateIsPublic(requestDto.getIsPublic());
-        }
-        
-        if (requestDto.getMemo() != null) {
-            plan.updateMemo(requestDto.getMemo());
-        }
-        
-        if (requestDto.getTotalCost() != null) {
-            plan.updateTotalCost(requestDto.getTotalCost());
-        }
+        // 업데이트할 필드만 업데이트
+        if (requestDto.getTitle() != null) plan.setTitle(requestDto.getTitle());
+        if (requestDto.getStartDate() != null) plan.setStartDate(requestDto.getStartDate());
+        if (requestDto.getEndDate() != null) plan.setEndDate(requestDto.getEndDate());
+        if (requestDto.getLocation() != null) plan.setLocation(requestDto.getLocation());
+        if (requestDto.getTransportInfo() != null) plan.setTransportInfo(requestDto.getTransportInfo());
+        if (requestDto.getIsPublic() != null) plan.setIsPublic(requestDto.getIsPublic());
+        if (requestDto.getMemo() != null) plan.setMemo(requestDto.getMemo());
         
         Plan updatedPlan = planRepository.save(plan);
         log.info("일정 정보가 업데이트되었습니다. ID: {}", updatedPlan.getPlanId());
@@ -144,21 +128,6 @@ public class PlanService {
         
         Plan updatedPlan = planRepository.save(plan);
         log.info("일정 기간이 업데이트되었습니다. ID: {}", updatedPlan.getPlanId());
-        
-        return PlanResponseDto.fromEntity(updatedPlan);
-    }
-    
-    /**
-     * 일정 비용 업데이트
-     */
-    public PlanResponseDto updatePlanCost(Integer userId, Integer planId, UpdateCostDto requestDto) {
-        log.info("일정 비용 업데이트: 사용자 ID {}, 일정 ID {}, 비용 {}", userId, planId, requestDto.getTotalCost());
-        
-        Plan plan = getPlanWithPermissionCheck(userId, planId);
-        plan.updateTotalCost(requestDto.getTotalCost());
-        
-        Plan updatedPlan = planRepository.save(plan);
-        log.info("일정 비용이 업데이트되었습니다. ID: {}, 비용: {}", updatedPlan.getPlanId(), updatedPlan.getTotalCost());
         
         return PlanResponseDto.fromEntity(updatedPlan);
     }

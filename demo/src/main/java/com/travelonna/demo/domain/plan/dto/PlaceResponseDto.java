@@ -52,6 +52,9 @@ public class PlaceResponseDto {
     
     @Schema(description = "경도", example = "128.492514")
     private String lon;
+
+    @Schema(description = "구글 ID", example = "ChIJCZ4FKFblZTURKU0R_4aNSek")
+    private String googleId;
     
     public static PlaceResponseDto fromEntity(Place place) {
         return PlaceResponseDto.builder()
@@ -65,6 +68,7 @@ public class PlaceResponseDto {
                 .memo(place.getMemo())
                 .lat(place.getLat())
                 .lon(place.getLon())
+                .googleId(place.getGoogleId())
                 .build();
     }
     
@@ -91,6 +95,7 @@ public class PlaceResponseDto {
                 .memo(place.getMemo())
                 .lat(place.getLat())
                 .lon(place.getLon())
+                .googleId(place.getGoogleId())
                 .build();
     }
 } 

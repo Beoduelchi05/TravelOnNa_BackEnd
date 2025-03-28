@@ -29,7 +29,7 @@ public class PlaceRequestDto {
         @Schema(description = "방문 날짜", example = "2023-11-20")
         private LocalDate visitDate;
         
-        @Schema(description = "장소 비용", example = "40000")
+        @Schema(description = "장소 비용 (일정 총 비용에 자동 합산됨)", example = "40000")
         private Integer placeCost;
         
         @Schema(description = "메모", example = "장소 메모 내용")
@@ -40,6 +40,15 @@ public class PlaceRequestDto {
         
         @Schema(description = "경도", example = "128.492514")
         private String lon;
+
+        @Schema(description = "장소 이름", example = "계명대학교")
+        private String name;
+
+        @Schema(description = "순서", example = "1")
+        private Integer order;
+
+        @Schema(description = "구글 ID", example = "ChIJCZ4FKFblZTURKU0R_4aNSek")
+        private String googleId;
     }
     
     @Getter
@@ -61,6 +70,9 @@ public class PlaceRequestDto {
         
         @Schema(description = "순서", example = "1")
         private Integer order;
+
+        @Schema(description = "구글 ID", example = "ChIJCZ4FKFblZTURKU0R_4aNSek")
+        private String googleId;
     }
     
     @Getter
@@ -80,7 +92,7 @@ public class PlaceRequestDto {
         @Schema(description = "방문 날짜", example = "2023-11-20")
         private LocalDate visitDate;
         
-        @Schema(description = "장소 비용", example = "40000")
+        @Schema(description = "장소 비용 (일정 총 비용에 자동 합산됨)", example = "40000")
         private Integer placeCost;
         
         @Schema(description = "메모", example = "수정된 장소 메모 내용")
@@ -97,5 +109,8 @@ public class PlaceRequestDto {
         
         @Schema(description = "순서", example = "1")
         private Integer order;
+
+        @Schema(description = "구글 ID", example = "ChIJCZ4FKFblZTURKU0R_4aNSek")
+        private String googleId;
     }
 } 

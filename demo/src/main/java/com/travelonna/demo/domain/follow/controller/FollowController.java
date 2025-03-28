@@ -36,8 +36,8 @@ import lombok.extern.slf4j.Slf4j;
 @RestController
 @RequestMapping("/api/v1/follows")
 @RequiredArgsConstructor
-@Tag(name = "Follow", description = "팔로우 관련 API")
-@SecurityRequirement(name = "bearerAuth") // Swagger UI에 인증 필요 표시
+@Tag(name = "Follow", description = "팔로우 관련 API (인증 필요)")
+@SecurityRequirement(name = "bearer-key") // Swagger UI에 인증 필요 표시
 public class FollowController {
 
     private final FollowService followService;
@@ -65,7 +65,9 @@ public class FollowController {
     })
     @PostMapping
     public ResponseEntity<ApiResponse<FollowResponseDto>> followProfile(
-            @Parameter(description = "팔로우 요청 정보", required = true, schema = @Schema(implementation = FollowRequestDto.class))
+            @Parameter(description = "팔로우 요청 정보", required = true, 
+                     schema = @Schema(implementation = FollowRequestDto.class),
+                     example = "{\n  \"toUser\": 10\n}")
             @RequestBody FollowRequestDto requestDto) {
         
         Integer fromUser = getCurrentUserId();

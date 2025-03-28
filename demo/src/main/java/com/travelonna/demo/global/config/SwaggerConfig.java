@@ -26,9 +26,15 @@ public class SwaggerConfig implements WebMvcConfigurer {
                         .title("TravelOnNa API")
                         .description("TravelOnNa 서비스의 API 문서\n\n" +
                                 "## 인증이 필요한 API\n" +
-                                "그룹, 개인 일정, 그룹 일정 관련 API는 인증이 필요합니다.\n\n" +
+                                "그룹, 개인 일정, 그룹 일정, 프로필, 팔로우, 여행 장소 관련 API는 인증이 필요합니다.\n\n" +
                                 "## 인증이 필요 없는 API\n" +
-                                "로그인, 회원가입 등 인증 관련 API는 인증이 필요하지 않습니다.")
+                                "로그인, 회원가입 등 인증 관련 API는 인증이 필요하지 않습니다.\n\n" +
+                                "## 인증 방법\n" +
+                                "1. `/api/v1/auth/google` API를 사용하여 로그인합니다.\n" +
+                                "2. 응답으로 받은 JWT 토큰을 복사합니다.\n" +
+                                "3. 오른쪽 상단의 'Authorize' 버튼을 클릭합니다.\n" +
+                                "4. 'bearer-key' 항목에 `Bearer {토큰값}` 형식으로 입력합니다. (예: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...)\n" +
+                                "5. 'Authorize' 버튼을 클릭하여 인증을 완료합니다.")
                         .version("1.0.0")
                         .contact(new Contact()
                                 .name("TravelOnNa Team")
@@ -50,7 +56,10 @@ public class SwaggerConfig implements WebMvcConfigurer {
                         new Tag().name("인증").description("인증 관련 API (인증 불필요)"),
                         new Tag().name("그룹").description("그룹 관리 API (인증 필요)"),
                         new Tag().name("개인 일정").description("개인 일정 관리 API (인증 필요)"),
-                        new Tag().name("그룹 일정").description("그룹 일정 관리 API (인증 필요)")
+                        new Tag().name("그룹 일정").description("그룹 일정 관리 API (인증 필요)"),
+                        new Tag().name("Profile").description("프로필 관리 API (인증 필요)"),
+                        new Tag().name("Follow").description("팔로우 관련 API (인증 필요)"),
+                        new Tag().name("여행 장소").description("여행 장소 관리 API (인증 필요)")
                 ));
     }
 } 

@@ -41,13 +41,13 @@ import lombok.extern.slf4j.Slf4j;
 @RestController
 @RequestMapping("/api/v1/plans")
 @RequiredArgsConstructor
-@Tag(name = "개인 일정", description = "개인 일정 관리 API")
+@Tag(name = "개인 일정", description = "개인 일정 관리 API (인증 필요)")
 public class PlanController {
     
     private final PlanService planService;
     private final ODSayTransportService oDSayTransportService;
     
-    @Operation(summary = "개인 일정 생성", description = "새로운 개인 일정을 생성합니다. 기간, 여행지, 이동수단을 함께 설정할 수 있습니다.")
+    @Operation(summary = "개인 일정 생성", description = "새로운 개인 일정을 생성합니다. 기간, 여행지, 이동수단을 함께 설정할 수 있습니다. 일정 총 비용은 0으로 초기화되며 장소 추가 시 자동으로 계산됩니다.")
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "일정 생성 성공"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 요청"),
@@ -56,7 +56,7 @@ public class PlanController {
     @PostMapping
     public ResponseEntity<ApiResponse<PlanResponseDto>> createPlan(
             @AuthenticationPrincipal UserDetails userDetails,
-            @Parameter(description = "생성할 일정 정보") @RequestBody CreatePlanDto requestDto) {
+            @Parameter(description = "생성할 일정 정보", example = "{ \"title\": \"서울 여행\", \"startDate\": \"2024-05-01\", \"endDate\": \"2024-05-05\" }") @RequestBody CreatePlanDto requestDto) {
         
         JwtUserDetails jwtUserDetails = (JwtUserDetails) userDetails;
         int userId = jwtUserDetails.getUserId();
@@ -78,8 +78,8 @@ public class PlanController {
     @PutMapping("/{planId}/period")
     public ResponseEntity<ApiResponse<PlanResponseDto>> updatePeriod(
             @AuthenticationPrincipal UserDetails userDetails,
-            @Parameter(description = "수정할 일정 ID") @PathVariable Integer planId,
-            @Parameter(description = "수정할 기간 정보") @RequestBody UpdatePeriodDto requestDto) {
+            @Parameter(description = "수정할 일정 ID", example = "1") @PathVariable Integer planId,
+            @Parameter(description = "수정할 기간 정보", example = "{ \"startDate\": \"2024-05-01\", \"endDate\": \"2024-05-05\" }") @RequestBody UpdatePeriodDto requestDto) {
         
         JwtUserDetails jwtUserDetails = (JwtUserDetails) userDetails;
         int userId = jwtUserDetails.getUserId();
@@ -100,8 +100,8 @@ public class PlanController {
     @PutMapping("/{planId}/location")
     public ResponseEntity<ApiResponse<PlanResponseDto>> updateLocation(
             @AuthenticationPrincipal UserDetails userDetails,
-            @Parameter(description = "수정할 일정 ID") @PathVariable Integer planId,
-            @Parameter(description = "수정할 여행지 정보") @RequestBody UpdateLocationDto requestDto) {
+            @Parameter(description = "수정할 일정 ID", example = "1") @PathVariable Integer planId,
+            @Parameter(description = "수정할 여행지 정보", example = "{ \"locationName\": \"서울\", \"locationAddress\": \"서울특별시\" }") @RequestBody UpdateLocationDto requestDto) {
         
         JwtUserDetails jwtUserDetails = (JwtUserDetails) userDetails;
         int userId = jwtUserDetails.getUserId();
@@ -122,8 +122,8 @@ public class PlanController {
     @PutMapping("/{planId}/transport")
     public ResponseEntity<ApiResponse<PlanResponseDto>> updateTransport(
             @AuthenticationPrincipal UserDetails userDetails,
-            @Parameter(description = "수정할 일정 ID") @PathVariable Integer planId,
-            @Parameter(description = "수정할 이동수단 정보") @RequestBody UpdateTransportDto requestDto) {
+            @Parameter(description = "수정할 일정 ID", example = "1") @PathVariable Integer planId,
+            @Parameter(description = "수정할 이동수단 정보", example = "{ \"transportInfo\": \"train\", \"bus\", \"car\", \"etc\" }") @RequestBody UpdateTransportDto requestDto) {
         
         JwtUserDetails jwtUserDetails = (JwtUserDetails) userDetails;
         int userId = jwtUserDetails.getUserId();
@@ -134,7 +134,7 @@ public class PlanController {
         return ResponseEntity.ok(ApiResponse.success("이동수단이 수정되었습니다.", responseDto));
     }
     
-    @Operation(summary = "일정 수정", description = "개인 일정 정보를 수정합니다.")
+    @Operation(summary = "일정 수정", description = "개인 일정 정보를 수정합니다. 일정 비용(totalCost)은 장소 비용에 따라 자동으로 계산되므로 수정할 수 없습니다.")
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "일정 수정 성공"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 요청"),
@@ -144,8 +144,8 @@ public class PlanController {
     @PutMapping("/{planId}")
     public ResponseEntity<ApiResponse<PlanResponseDto>> updatePlan(
             @AuthenticationPrincipal UserDetails userDetails,
-            @Parameter(description = "수정할 일정 ID") @PathVariable Integer planId,
-            @Parameter(description = "수정할 일정 정보") @RequestBody UpdatePlanDto requestDto) {
+            @Parameter(description = "수정할 일정 ID", example = "1") @PathVariable Integer planId,
+            @Parameter(description = "수정할 일정 정보", example = "{ \"title\": \"서울 여행\", \"startDate\": \"2024-05-01\", \"endDate\": \"2024-05-05\", \"location\": \"서울\", \"transportInfo\": \"car\", \"isPublic\": true, \"memo\": \"메모 내용\" }") @RequestBody UpdatePlanDto requestDto) {
         
         JwtUserDetails jwtUserDetails = (JwtUserDetails) userDetails;
         int userId = jwtUserDetails.getUserId();
@@ -165,7 +165,7 @@ public class PlanController {
     @DeleteMapping("/{planId}")
     public ResponseEntity<ApiResponse<Void>> deletePlan(
             @AuthenticationPrincipal UserDetails userDetails,
-            @Parameter(description = "삭제할 일정 ID") @PathVariable Integer planId) {
+            @Parameter(description = "삭제할 일정 ID", example = "1") @PathVariable Integer planId) {
         
         JwtUserDetails jwtUserDetails = (JwtUserDetails) userDetails;
         int userId = jwtUserDetails.getUserId();
@@ -176,29 +176,7 @@ public class PlanController {
         return ResponseEntity.ok(ApiResponse.success("여행 일정이 삭제되었습니다.", null));
     }
     
-    @Operation(summary = "일정 비용 업데이트", description = "개인 일정의 총 비용을 설정합니다.")
-    @ApiResponses(value = {
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "비용 업데이트 성공"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 요청"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "일정을 찾을 수 없음")
-    })
-    @PutMapping("/{planId}/cost")
-    public ResponseEntity<ApiResponse<PlanResponseDto>> updatePlanCost(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @Parameter(description = "비용을 업데이트할 일정 ID") @PathVariable Integer planId,
-            @Parameter(description = "업데이트할 비용 정보") @RequestBody UpdateCostDto requestDto) {
-        
-        JwtUserDetails jwtUserDetails = (JwtUserDetails) userDetails;
-        int userId = jwtUserDetails.getUserId();
-        log.info("일정 비용 업데이트 요청: 사용자 ID {}, 일정 ID {}, 비용 {}", userId, planId, requestDto.getTotalCost());
-        
-        PlanResponseDto responseDto = planService.updatePlanCost(userId, planId, requestDto);
-        
-        return ResponseEntity.ok(ApiResponse.success("여행 비용이 업데이트되었습니다.", responseDto));
-    }
-    
-    @Operation(summary = "일정 비용 조회", description = "개인 일정의 총 비용을 조회합니다.")
+    @Operation(summary = "일정 비용 조회", description = "개인 일정의 총 비용을 조회합니다. 이 비용은 장소 비용의 합으로 자동 계산됩니다.")
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "비용 조회 성공"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패"),
@@ -245,7 +223,7 @@ public class PlanController {
     @PostMapping("/transportation/search")
     public ResponseEntity<ApiResponse<TransportationResponseDto>> searchTransportation(
             @AuthenticationPrincipal UserDetails userDetails,
-            @Parameter(description = "교통편 검색 정보") @RequestBody SearchTransportationDto requestDto) {
+            @Parameter(description = "교통편 검색 정보", example = "{ \"source\": \"서울\", \"destination\": \"부산\", \"departureDate\": \"2024-05-01\", \"transportType\": \"train\" }") @RequestBody SearchTransportationDto requestDto) {
         
         JwtUserDetails jwtUserDetails = (JwtUserDetails) userDetails;
         int userId = jwtUserDetails.getUserId();

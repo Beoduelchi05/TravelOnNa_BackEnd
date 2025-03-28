@@ -61,4 +61,7 @@ public class Place {
     
     @Column(name = "p_order", nullable = false)
     private Integer order;
+    
+    @Column(name = "google_id")
+    private String googleId;
 } 
