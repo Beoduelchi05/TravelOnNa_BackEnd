@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.travelonna.demo.domain.plan.dto.PlanRequestDto.CreatePlanDto;
 import com.travelonna.demo.domain.plan.dto.PlanRequestDto.SearchTransportationDto;
-import com.travelonna.demo.domain.plan.dto.PlanRequestDto.UpdateCostDto;
 import com.travelonna.demo.domain.plan.dto.PlanRequestDto.UpdateLocationDto;
 import com.travelonna.demo.domain.plan.dto.PlanRequestDto.UpdatePeriodDto;
 import com.travelonna.demo.domain.plan.dto.PlanRequestDto.UpdatePlanDto;
