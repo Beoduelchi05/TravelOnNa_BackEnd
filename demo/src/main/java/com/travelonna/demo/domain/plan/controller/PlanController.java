@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.travelonna.demo.domain.plan.dto.PlanDetailResponseDto;
 import com.travelonna.demo.domain.plan.dto.PlanRequestDto.CreatePlanDto;
 import com.travelonna.demo.domain.plan.dto.PlanRequestDto.SearchTransportationDto;
 import com.travelonna.demo.domain.plan.dto.PlanRequestDto.UpdateLocationDto;
@@ -236,5 +237,28 @@ public class PlanController {
                 requestDto.getTransportType());
         
         return ResponseEntity.ok(ApiResponse.success("교통편 검색 성공", responseDto));
+    }
+
+    /**
+     * 일정 상세 정보 조회
+     */
+    @GetMapping("/{planId}/detail")
+    @Operation(summary = "일정 상세 정보 조회", description = "일정 ID를 이용하여 일정의 상세 정보와 장소 목록을 조회합니다.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "일정 상세 정보 조회 성공"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "일정을 찾을 수 없음"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "권한 없음")
+    })
+    public ResponseEntity<ApiResponse<PlanDetailResponseDto>> getPlanDetail(
+            @Parameter(description = "일정 ID", required = true) @PathVariable Integer planId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        
+        JwtUserDetails jwtUserDetails = (JwtUserDetails) userDetails;
+        int userId = jwtUserDetails.getUserId();
+        log.info("일정 상세 정보 조회 요청: 사용자 ID {}, 일정 ID {}", userId, planId);
+        
+        PlanDetailResponseDto planDetail = planService.getPlanDetail(userId, planId);
+        
+        return ResponseEntity.ok(ApiResponse.success("일정 상세 정보 조회 성공", planDetail));
     }
 }

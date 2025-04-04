@@ -7,13 +7,17 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.travelonna.demo.domain.plan.dto.PlaceResponseDto;
+import com.travelonna.demo.domain.plan.dto.PlanDetailResponseDto;
 import com.travelonna.demo.domain.plan.dto.PlanRequestDto.CreatePlanDto;
 import com.travelonna.demo.domain.plan.dto.PlanRequestDto.UpdateLocationDto;
 import com.travelonna.demo.domain.plan.dto.PlanRequestDto.UpdatePeriodDto;
 import com.travelonna.demo.domain.plan.dto.PlanRequestDto.UpdatePlanDto;
 import com.travelonna.demo.domain.plan.dto.PlanRequestDto.UpdateTransportDto;
 import com.travelonna.demo.domain.plan.dto.PlanResponseDto;
+import com.travelonna.demo.domain.plan.entity.Place;
 import com.travelonna.demo.domain.plan.entity.Plan;
+import com.travelonna.demo.domain.plan.repository.PlaceRepository;
 import com.travelonna.demo.domain.plan.repository.PlanRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -26,6 +30,7 @@ import lombok.extern.slf4j.Slf4j;
 public class PlanService {
     
     private final PlanRepository planRepository;
+    private final PlaceRepository placeRepository;
     
     /**
      * 개인 일정 생성
@@ -185,5 +190,31 @@ public class PlanService {
         if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
             throw new IllegalArgumentException("시작 날짜는 종료 날짜보다 빨라야 합니다.");
         }
+    }
+    
+    /**
+     * 일정 상세 정보 조회
+     */
+    @Transactional(readOnly = true)
+    public PlanDetailResponseDto getPlanDetail(Integer userId, Integer planId) {
+        log.info("일정 상세 정보 조회: 사용자 ID {}, 일정 ID {}", userId, planId);
+        
+        // 일정 존재 여부 확인 및 권한 체크
+        Plan plan = getPlanWithPermissionCheck(userId, planId);
+        
+        // 해당 일정의 장소 목록 조회
+        List<Place> places = placeRepository.findByPlanIdOrderByOrder(planId);
+        
+        // 장소 응답 DTO 생성 (visitDate로부터 여행 일차 계산)
+        List<PlaceResponseDto> placeDtos = places.stream()
+                .map(PlaceResponseDto::fromEntityWithDay)
+                .collect(Collectors.toList());
+        
+        // 일정 상세 정보 응답 DTO 생성
+        PlanDetailResponseDto responseDto = PlanDetailResponseDto.fromEntity(plan, placeDtos);
+        
+        log.info("일정 상세 정보 조회 완료: 일정 ID {}, 장소 수 {}", planId, placeDtos.size());
+        
+        return responseDto;
     }
 } 
