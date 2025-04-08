@@ -18,6 +18,7 @@ import com.travelonna.demo.domain.log.dto.LogResponseDto;
 import com.travelonna.demo.domain.log.service.LogService;
 import com.travelonna.demo.domain.user.repository.UserRepository;
 import com.travelonna.demo.global.common.ApiResponse;
+import com.travelonna.demo.domain.user.entity.User;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -176,7 +177,23 @@ public class LogController {
     
     // TODO: 인증 구현 시 대체
     private Integer getCurrentUserId() {
-        // 데이터베이스에 존재하는 유효한 사용자 ID로 변경
-        return 6; // 테스트용 사용자 ID를 6으로 변경 - 실제 DB에 존재하는 ID여야 합니다
+        try {
+            // 실제 환경에서는 SecurityContext에서 사용자 정보를 가져와야 함
+            // 임시 구현: 데이터베이스에서 첫 번째 사용자 검색
+            log.debug("사용자 ID 조회 시도 - 테스트 모드");
+            
+            List<User> users = userRepository.findAll();
+            if (!users.isEmpty()) {
+                User user = users.get(0);
+                log.debug("DB에서 첫 번째 사용자 조회 성공: userId={}", user.getUserId());
+                return user.getUserId();
+            } else {
+                log.warn("DB에 사용자가 없음, 기본 테스트 ID 12 사용");
+                return 12; // 테스트용 ID (실제 DB에 존재해야 함)
+            }
+        } catch (Exception e) {
+            log.error("사용자 ID 조회 중 오류 발생: {}", e.getMessage(), e);
+            return 12; // 오류 발생 시 기본값
+        }
     }
 } 

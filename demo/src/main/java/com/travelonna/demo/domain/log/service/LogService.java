@@ -22,6 +22,8 @@ import com.travelonna.demo.domain.user.repository.UserRepository;
 import com.travelonna.demo.global.exception.ResourceNotFoundException;
 
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 @RequiredArgsConstructor
@@ -34,28 +36,44 @@ public class LogService {
     private final UserRepository userRepository;
     private final PlanRepository planRepository;
     
+    private static final Logger log = LoggerFactory.getLogger(LogService.class);
+    
     // 기록 생성
     @Transactional
     public LogResponseDto createLog(Integer userId, LogRequestDto requestDto) {
+        log.debug("여행 기록 생성 시작: 사용자 ID={}, 요청 데이터={}", userId, requestDto);
+        
         // 사용자 검증
+        log.debug("사용자 조회 시도: userId={}", userId);
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> {
+                    log.error("사용자를 찾을 수 없음: userId={}", userId);
+                    return new ResourceNotFoundException("User not found: ID=" + userId);
+                });
+        log.debug("사용자 조회 성공: user={}", user.getUserId());
         
         // 일정 검증
+        log.debug("일정 조회 시도: planId={}", requestDto.getPlanId());
         Plan plan = planRepository.findById(requestDto.getPlanId())
-                .orElseThrow(() -> new ResourceNotFoundException("Plan not found"));
+                .orElseThrow(() -> {
+                    log.error("일정을 찾을 수 없음: planId={}", requestDto.getPlanId());
+                    return new ResourceNotFoundException("Plan not found: ID=" + requestDto.getPlanId());
+                });
+        log.debug("일정 조회 성공: plan={}, planUserId={}", plan.getPlanId(), plan.getUserId());
         
         // 사용자가 해당 일정의 소유자인지 확인
         if (!plan.getUserId().equals(userId)) {
+            log.error("사용자가 일정의 소유자가 아님: userId={}, planUserId={}", userId, plan.getUserId());
             throw new IllegalArgumentException("User is not the owner of the plan");
         }
         
         // comment가 null이거나 비어있는지 확인 (@Valid로 검증되지만 추가 검증)
         if (requestDto.getComment() == null || requestDto.getComment().trim().isEmpty()) {
+            log.error("댓글이 비어있음");
             throw new IllegalArgumentException("Comment is required");
         }
         
-        Log log = Log.builder()
+        Log logEntity = Log.builder()
                 .user(user)
                 .plan(plan)
                 .comment(requestDto.getComment())
@@ -63,11 +81,12 @@ public class LogService {
                 .build();
         
         // images 컬렉션이 null인 경우 초기화
-        if (log.getImages() == null) {
-            log.setImages(new ArrayList<>());
+        if (logEntity.getImages() == null) {
+            logEntity.setImages(new ArrayList<>());
         }
         
-        Log savedLog = logRepository.save(log);
+        Log savedLog = logRepository.save(logEntity);
+        log.debug("여행 기록 저장 성공: logId={}", savedLog.getLogId());
         
         // 이미지가 제공된 경우에만 처리 (선택 사항)
         if (requestDto.getImageUrls() != null && !requestDto.getImageUrls().isEmpty()) {
