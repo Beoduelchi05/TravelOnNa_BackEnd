@@ -4,9 +4,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -61,7 +59,7 @@ public class PlaceService {
                 .memo(requestDto.getMemo())
                 .lat(requestDto.getLat())
                 .lon(requestDto.getLon())
-                .name(requestDto.getPlace()) // 주소를 기본 이름으로 사용
+                .name(requestDto.getName())
                 .order(newOrder)
                 .googleId(requestDto.getGoogleId())
                 .build();
