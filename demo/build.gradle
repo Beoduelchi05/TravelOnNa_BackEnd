@@ -40,6 +40,7 @@ dependencies {
     
     // 데이터베이스 관련 의존성
     implementation 'mysql:mysql-connector-java:8.0.33'
+    runtimeOnly 'com.mysql:mysql-connector-j'
     
     // Google API 클라이언트
     implementation 'com.google.api-client:google-api-client:2.2.0'

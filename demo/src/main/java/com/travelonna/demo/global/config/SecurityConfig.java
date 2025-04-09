@@ -44,6 +44,8 @@ public class SecurityConfig {
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html", "/api-docs/**").permitAll()
                 .requestMatchers("/error").permitAll()
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                // 테스트용으로 일단 로그 API는 인증 없이 허용
+                .requestMatchers("/api/logs/**").permitAll()
                 // 그 외 모든 API는 인증 필요
                 .anyRequest().authenticated()
             )

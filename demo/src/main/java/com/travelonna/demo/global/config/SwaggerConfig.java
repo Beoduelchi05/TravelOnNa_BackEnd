@@ -1,20 +1,21 @@
 package com.travelonna.demo.global.config;
 
-import io.swagger.v3.oas.models.OpenAPI;
-import io.swagger.v3.oas.models.info.Info;
-import io.swagger.v3.oas.models.info.License;
-import io.swagger.v3.oas.models.info.Contact;
-import io.swagger.v3.oas.models.Components;
-import io.swagger.v3.oas.models.security.SecurityScheme;
-import io.swagger.v3.oas.models.security.SecurityRequirement;
-import io.swagger.v3.oas.models.servers.Server;
-import io.swagger.v3.oas.models.tags.Tag;
+import java.util.Arrays;
+import java.util.List;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-import java.util.Arrays;
-import java.util.List;
+import io.swagger.v3.oas.models.Components;
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Contact;
+import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.info.License;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
+import io.swagger.v3.oas.models.security.SecurityScheme;
+import io.swagger.v3.oas.models.servers.Server;
+import io.swagger.v3.oas.models.tags.Tag;
 
 @Configuration
 public class SwaggerConfig implements WebMvcConfigurer {
@@ -59,7 +60,8 @@ public class SwaggerConfig implements WebMvcConfigurer {
                         new Tag().name("그룹 일정").description("그룹 일정 관리 API (인증 필요)"),
                         new Tag().name("Profile").description("프로필 관리 API (인증 필요)"),
                         new Tag().name("Follow").description("팔로우 관련 API (인증 필요)"),
-                        new Tag().name("여행 장소").description("여행 장소 관리 API (인증 필요)")
+                        new Tag().name("여행 장소").description("여행 장소 관리 API (인증 필요)"),
+                        new Tag().name("여행 기록").description("여행 기록 CRUD 및 좋아요/댓글 관리 API (인증 필요)")
                 ));
     }
 } 
