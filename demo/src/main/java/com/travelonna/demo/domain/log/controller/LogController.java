@@ -16,9 +16,9 @@ import org.springframework.web.bind.annotation.RestController;
 import com.travelonna.demo.domain.log.dto.LogRequestDto;
 import com.travelonna.demo.domain.log.dto.LogResponseDto;
 import com.travelonna.demo.domain.log.service.LogService;
+import com.travelonna.demo.domain.user.entity.User;
 import com.travelonna.demo.domain.user.repository.UserRepository;
 import com.travelonna.demo.global.common.ApiResponse;
-import com.travelonna.demo.domain.user.entity.User;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -32,7 +32,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Tag(name = "여행 기록", description = "여행 기록 CRUD 및 좋아요/댓글 관리 API")
 @RestController
-@RequestMapping("/api/logs")
+@RequestMapping("/api/v1/logs")
 @RequiredArgsConstructor
 @Slf4j
 public class LogController {
@@ -50,6 +50,7 @@ public class LogController {
     })
     @PostMapping
     public ResponseEntity<ApiResponse<LogResponseDto>> createLog(
+            @Parameter(description = "여행 기록 생성 정보", example = "{\n  \"planId\": 1,\n  \"comment\": \"정말 멋진 여행이었습니다!\",\n  \"isPublic\": true,\n  \"imageUrls\": [\"https://example.com/image1.jpg\", \"https://example.com/image2.jpg\"]\n}")
             @Valid @RequestBody LogRequestDto requestDto) {
         // 현재 로그인한 사용자 ID (인증 구현 필요)
         Integer userId = getCurrentUserId();
@@ -67,7 +68,7 @@ public class LogController {
     })
     @GetMapping("/{logId}")
     public ResponseEntity<ApiResponse<LogResponseDto>> getLog(
-            @Parameter(description = "조회할 기록 ID", required = true) 
+            @Parameter(description = "조회할 기록 ID", required = true, example = "1") 
             @PathVariable Integer logId) {
         // 현재 로그인한 사용자 ID (인증 구현 필요)
         Integer userId = getCurrentUserId();
@@ -83,7 +84,7 @@ public class LogController {
     })
     @GetMapping("/users/{userId}")
     public ResponseEntity<ApiResponse<List<LogResponseDto>>> getLogsByUser(
-            @Parameter(description = "조회할 사용자 ID", required = true)
+            @Parameter(description = "조회할 사용자 ID", required = true, example = "1")
             @PathVariable Integer userId) {
         // 현재 로그인한 사용자 ID (인증 구현 필요)
         Integer currentUserId = getCurrentUserId();
@@ -99,7 +100,7 @@ public class LogController {
     })
     @GetMapping("/plans/{planId}")
     public ResponseEntity<ApiResponse<List<LogResponseDto>>> getLogsByPlan(
-            @Parameter(description = "조회할 일정 ID", required = true)
+            @Parameter(description = "조회할 일정 ID", required = true, example = "5")
             @PathVariable Integer planId) {
         // 현재 로그인한 사용자 ID (인증 구현 필요)
         Integer userId = getCurrentUserId();
@@ -130,8 +131,9 @@ public class LogController {
     })
     @PutMapping("/{logId}")
     public ResponseEntity<ApiResponse<LogResponseDto>> updateLog(
-            @Parameter(description = "수정할 기록 ID", required = true)
+            @Parameter(description = "수정할 기록 ID", required = true, example = "2")
             @PathVariable Integer logId,
+            @Parameter(description = "수정할 여행 기록 정보", example = "{\n  \"planId\": 1,\n  \"comment\": \"수정된 여행 기록입니다.\",\n  \"isPublic\": false,\n  \"imageUrls\": [\"https://example.com/newimage1.jpg\"]\n}")
             @Valid @RequestBody LogRequestDto requestDto) {
         // 현재 로그인한 사용자 ID (인증 구현 필요)
         Integer userId = getCurrentUserId();
@@ -148,7 +150,7 @@ public class LogController {
     })
     @DeleteMapping("/{logId}")
     public ResponseEntity<ApiResponse<Void>> deleteLog(
-            @Parameter(description = "삭제할 기록 ID", required = true)
+            @Parameter(description = "삭제할 기록 ID", required = true, example = "3")
             @PathVariable Integer logId) {
         // 현재 로그인한 사용자 ID (인증 구현 필요)
         Integer userId = getCurrentUserId();
@@ -164,7 +166,7 @@ public class LogController {
     })
     @PostMapping("/{logId}/likes")
     public ResponseEntity<ApiResponse<Boolean>> toggleLike(
-            @Parameter(description = "좋아요 토글할 기록 ID", required = true)
+            @Parameter(description = "좋아요 토글할 기록 ID", required = true, example = "4")
             @PathVariable Integer logId) {
         // 현재 로그인한 사용자 ID (인증 구현 필요)
         Integer userId = getCurrentUserId();

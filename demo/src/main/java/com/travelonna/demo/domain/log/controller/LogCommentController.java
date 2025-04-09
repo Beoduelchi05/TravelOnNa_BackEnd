@@ -20,6 +20,12 @@ import com.travelonna.demo.domain.user.entity.User;
 import com.travelonna.demo.domain.user.repository.UserRepository;
 import com.travelonna.demo.global.common.ApiResponse;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,15 +34,25 @@ import lombok.extern.slf4j.Slf4j;
 @RequestMapping("/api/logs")
 @RequiredArgsConstructor
 @Slf4j
+@Tag(name = "여행 기록 댓글", description = "여행 기록 댓글 관리 API")
 public class LogCommentController {
     
     private final LogCommentService logCommentService;
     private final UserRepository userRepository;
     
     // 댓글 생성
+    @Operation(summary = "댓글 생성", description = "여행 기록에 댓글을 작성합니다. 대댓글인 경우 parentId를 지정하세요.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "댓글 생성 성공", 
+                 content = @Content(schema = @Schema(implementation = LogCommentResponseDto.class))),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 요청"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "기록을 찾을 수 없음")
+    })
     @PostMapping("/{logId}/comments")
     public ResponseEntity<ApiResponse<LogCommentResponseDto>> createComment(
+            @Parameter(description = "댓글을 작성할 기록 ID", required = true, example = "1")
             @PathVariable Integer logId,
+            @Parameter(description = "댓글 정보", example = "{\n  \"comment\": \"정말 멋진 여행이네요!\",\n  \"parentId\": null\n}")
             @Valid @RequestBody LogCommentRequestDto requestDto) {
         // 현재 로그인한 사용자 ID (인증 구현 필요)
         Integer userId = getCurrentUserId();
@@ -47,17 +63,31 @@ public class LogCommentController {
     }
     
     // 특정 기록의 댓글 조회
+    @Operation(summary = "기록별 댓글 목록 조회", description = "특정 여행 기록의 댓글 목록을 조회합니다.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "댓글 목록 조회 성공"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "기록을 찾을 수 없음")
+    })
     @GetMapping("/{logId}/comments")
     public ResponseEntity<ApiResponse<List<LogCommentResponseDto>>> getCommentsByLogId(
+            @Parameter(description = "조회할 기록 ID", required = true, example = "1")
             @PathVariable Integer logId) {
         List<LogCommentResponseDto> responseDtoList = logCommentService.getCommentsByLogId(logId);
         return ResponseEntity.ok(ApiResponse.success("댓글 목록을 성공적으로 조회했습니다.", responseDtoList));
     }
     
     // 댓글 수정
+    @Operation(summary = "댓글 수정", description = "기존 댓글의 내용을 수정합니다.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "댓글 수정 성공"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "수정 권한 없음"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "댓글을 찾을 수 없음")
+    })
     @PutMapping("/comments/{commentId}")
     public ResponseEntity<ApiResponse<LogCommentResponseDto>> updateComment(
+            @Parameter(description = "수정할 댓글 ID", required = true, example = "5")
             @PathVariable Integer commentId,
+            @Parameter(description = "수정할 댓글 정보", example = "{\n  \"comment\": \"수정된 댓글입니다.\",\n  \"parentId\": null\n}")
             @Valid @RequestBody LogCommentRequestDto requestDto) {
         // 현재 로그인한 사용자 ID (인증 구현 필요)
         Integer userId = getCurrentUserId();
@@ -67,8 +97,15 @@ public class LogCommentController {
     }
     
     // 댓글 삭제
+    @Operation(summary = "댓글 삭제", description = "댓글을 삭제합니다.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "댓글 삭제 성공"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "삭제 권한 없음"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "댓글을 찾을 수 없음")
+    })
     @DeleteMapping("/comments/{commentId}")
     public ResponseEntity<ApiResponse<Void>> deleteComment(
+            @Parameter(description = "삭제할 댓글 ID", required = true, example = "7")
             @PathVariable Integer commentId) {
         // 현재 로그인한 사용자 ID (인증 구현 필요)
         Integer userId = getCurrentUserId();
