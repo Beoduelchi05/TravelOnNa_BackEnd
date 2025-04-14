@@ -47,15 +47,15 @@ public class GroupController {
         return ResponseEntity.status(HttpStatus.CREATED).body(responseDto);
     }
 
-    @Operation(summary = "URL로 그룹 조회", description = "그룹 URL을 사용하여 그룹 정보를 조회합니다.")
+    @Operation(summary = "Plan ID로 그룹 조회", description = "Plan ID를 사용하여 그룹 정보를 조회합니다.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "그룹 조회 성공"),
         @ApiResponse(responseCode = "404", description = "그룹을 찾을 수 없음")
     })
-    @GetMapping("/{url}")
-    public ResponseEntity<GroupResponseDto> getGroupByUrl(
-            @Parameter(description = "조회할 그룹의 URL", example = "travel-group") @PathVariable String url) {
-        GroupResponseDto responseDto = groupService.findGroupByUrl(url);
+    @GetMapping("/plan/{planId}")
+    public ResponseEntity<GroupResponseDto> getGroupByPlanId(
+            @Parameter(description = "조회할 Plan의 ID", example = "1") @PathVariable Integer planId) {
+        GroupResponseDto responseDto = groupService.findGroupByPlanId(planId);
         return ResponseEntity.ok(responseDto);
     }
 

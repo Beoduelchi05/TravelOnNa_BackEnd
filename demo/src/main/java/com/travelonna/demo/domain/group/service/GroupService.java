@@ -15,6 +15,8 @@ import com.travelonna.demo.domain.group.repository.GroupMemberRepository;
 import com.travelonna.demo.domain.group.repository.GroupRepository;
 import com.travelonna.demo.domain.user.entity.User;
 import com.travelonna.demo.domain.user.repository.UserRepository;
+import com.travelonna.demo.domain.plan.entity.Plan;
+import com.travelonna.demo.domain.plan.repository.PlanRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +29,7 @@ public class GroupService {
     private final GroupRepository groupRepository;
     private final GroupMemberRepository groupMemberRepository;
     private final UserRepository userRepository;
+    private final PlanRepository planRepository;
 
     @Transactional
     public GroupResponseDto createGroup(Integer userId, GroupRequestDto requestDto) {
@@ -70,6 +73,22 @@ public class GroupService {
     public GroupResponseDto findGroupByUrl(String url) {
         GroupEntity group = groupRepository.findByUrl(url)
                 .orElseThrow(() -> new IllegalArgumentException("Group not found with URL: " + url));
+        
+        return GroupResponseDto.fromEntity(group);
+    }
+
+    @Transactional(readOnly = true)
+    public GroupResponseDto findGroupByPlanId(Integer planId) {
+        Plan plan = planRepository.findById(planId)
+                .orElseThrow(() -> new IllegalArgumentException("Plan not found with ID: " + planId));
+        
+        Integer groupId = plan.getGroupId();
+        if (groupId == null) {
+            throw new IllegalArgumentException("This plan is not associated with any group");
+        }
+        
+        GroupEntity group = groupRepository.findById(groupId.longValue())
+                .orElseThrow(() -> new IllegalArgumentException("Group not found with ID: " + groupId));
         
         return GroupResponseDto.fromEntity(group);
     }
