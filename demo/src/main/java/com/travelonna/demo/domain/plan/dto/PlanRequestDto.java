@@ -37,6 +37,9 @@ public class PlanRequestDto {
         
         @Schema(description = "메모", example = "준비물: 수영복, 선글라스")
         private String memo;
+        
+        @Schema(description = "그룹 ID (그룹 일정인 경우)", example = "1")
+        private Integer groupId;
     }
     
     @Getter
