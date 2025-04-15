@@ -6,16 +6,22 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.BufferingClientHttpRequestFactory;
+import org.springframework.http.client.ClientHttpRequestInterceptor;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -36,6 +42,47 @@ public class ODSayApiClient {
     private static final String BASE_URL = "https://api.odsay.com/v1/api";
     private static final String PUBLIC_IP_CHECK_URL = "https://checkip.amazonaws.com";
     private static final String EC2_METADATA_URL = "http://169.254.169.254/latest/meta-data/public-ipv4";
+    
+    /**
+     * RestTemplate 인터셉터를 설정하여 요청과 응답 로깅
+     */
+    @PostConstruct
+    public void init() {
+        // BufferingClientHttpRequestFactory 사용하여 응답 본문을 여러 번 읽을 수 있게 함
+        restTemplate.setRequestFactory(
+            new BufferingClientHttpRequestFactory(new SimpleClientHttpRequestFactory())
+        );
+        
+        // 요청/응답 로깅 인터셉터 추가
+        List<ClientHttpRequestInterceptor> interceptors = Collections.singletonList(
+            (request, body, execution) -> {
+                // 요청 정보 로깅
+                log.info("===== ODSay API 요청 정보 =====");
+                log.info("요청 URL: {}", request.getURI());
+                log.info("요청 메소드: {}", request.getMethod());
+                log.info("요청 헤더:");
+                request.getHeaders().forEach((key, value) -> log.info("  - {}: {}", key, value));
+                
+                if (body.length > 0) {
+                    log.info("요청 본문: {}", new String(body));
+                }
+                
+                // 실제 요청 실행
+                org.springframework.http.client.ClientHttpResponse response = execution.execute(request, body);
+                
+                // 응답 정보 로깅
+                log.info("===== ODSay API 응답 정보 =====");
+                log.info("응답 상태 코드: {}", response.getStatusCode());
+                log.info("응답 헤더:");
+                response.getHeaders().forEach((key, value) -> log.info("  - {}: {}", key, value));
+                
+                return response;
+            }
+        );
+        
+        restTemplate.setInterceptors(interceptors);
+        log.info("ODSay API 클라이언트 요청/응답 로깅 인터셉터 설정 완료");
+    }
     
     /**
      * EC2 메타데이터에서 퍼블릭 IP 주소를 가져옵니다.
@@ -168,6 +215,8 @@ public class ODSayApiClient {
             
             org.springframework.http.HttpEntity<Void> entity = new org.springframework.http.HttpEntity<>(headers);
             
+            log.info("===== API 호출 시작: searchPubTransPath =====");
+            
             // API 호출
             ResponseEntity<String> rawResponse = restTemplate.exchange(
                 urlStr,
@@ -175,6 +224,8 @@ public class ODSayApiClient {
                 entity,
                 String.class
             );
+            
+            log.info("===== API 호출 완료: searchPubTransPath =====");
             
             if (rawResponse.getStatusCode().is2xxSuccessful()) {
                 log.info("ODSay API 응답(원본): {}", rawResponse.getBody());
@@ -254,6 +305,8 @@ public class ODSayApiClient {
             
             org.springframework.http.HttpEntity<Void> entity = new org.springframework.http.HttpEntity<>(headers);
             
+            log.info("===== API 호출 시작: trainTerminals =====");
+            
             // API 호출
             ResponseEntity<String> rawResponse = restTemplate.exchange(
                 urlStr,
@@ -261,6 +314,8 @@ public class ODSayApiClient {
                 entity,
                 String.class
             );
+            
+            log.info("===== API 호출 완료: trainTerminals =====");
             
             if (rawResponse.getStatusCode().is2xxSuccessful()) {
                 log.info("ODSay API 응답(원본): {}", rawResponse.getBody());
@@ -342,6 +397,8 @@ public class ODSayApiClient {
             
             org.springframework.http.HttpEntity<Void> entity = new org.springframework.http.HttpEntity<>(headers);
             
+            log.info("===== API 호출 시작: trainServiceTime =====");
+            
             // API 호출
             ResponseEntity<String> rawResponse = restTemplate.exchange(
                 urlStr,
@@ -349,6 +406,8 @@ public class ODSayApiClient {
                 entity,
                 String.class
             );
+            
+            log.info("===== API 호출 완료: trainServiceTime =====");
             
             if (rawResponse.getStatusCode().is2xxSuccessful()) {
                 log.info("ODSay API 응답(원본): {}", rawResponse.getBody());
