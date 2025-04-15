@@ -1,14 +1,17 @@
 package com.travelonna.demo.global.api.odsay;
 
-import java.net.URI;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -22,11 +25,63 @@ import lombok.extern.slf4j.Slf4j;
 public class ODSayApiClient {
 
     private final RestTemplate restTemplate;
+    private final Environment environment;
     
-    @Value("${odsay.api.key.uri}")
-    private String apiKey;
+    @Value("${odsay.api.key.server}")
+    private String serverApiKey;
+    
+    @Value("${odsay.api.key.service}")
+    private String serviceApiKey;
     
     private static final String BASE_URL = "https://api.odsay.com/v1/api";
+    private static final String PUBLIC_IP_CHECK_URL = "https://checkip.amazonaws.com";
+    
+    /**
+     * 퍼블릭 IP 주소를 가져옵니다.
+     * 
+     * @return 퍼블릭 IP 주소 또는 에러 발생 시 "unknown"
+     */
+    private String getPublicIpAddress() {
+        try {
+            URL url = new URL(PUBLIC_IP_CHECK_URL);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+            connection.setConnectTimeout(5000);
+            connection.setReadTimeout(5000);
+            
+            BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+            String publicIp = reader.readLine().trim();
+            reader.close();
+            
+            return publicIp;
+        } catch (Exception e) {
+            log.error("퍼블릭 IP 주소 조회 중 오류 발생", e);
+            return "unknown";
+        }
+    }
+    
+    /**
+     * 현재 환경에 맞는 API 키 반환
+     * 개발 환경: server API key
+     * 운영 환경: service API key
+     * 
+     * @return 현재 환경에 적합한 API 키
+     */
+    private String getApiKey() {
+        String[] activeProfiles = environment.getActiveProfiles();
+        boolean isProduction = false;
+        
+        for (String profile : activeProfiles) {
+            if (profile.equals("prod") || profile.equals("production")) {
+                isProduction = true;
+                break;
+            }
+        }
+        
+        String apiKey = isProduction ? serviceApiKey : serverApiKey;
+        log.info("현재 환경: {}, 사용 API Key: {}", isProduction ? "운영" : "개발", apiKey.substring(0, 5) + "...");
+        return apiKey;
+    }
     
     /**
      * 출발지와 도착지로 대중교통 정보 조회
@@ -39,6 +94,8 @@ public class ODSayApiClient {
      */
     public JsonNode searchTransportation(String srcName, String dstName, LocalDate date, String transportType) {
         log.info("ODSay API 호출: 출발지 {}, 도착지 {}, 날짜 {}, 이동수단 {}", srcName, dstName, date, transportType);
+        
+        String apiKey = getApiKey();
         log.info("API Key(원본): {}", apiKey);
         
         String formattedDate = date.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
@@ -47,8 +104,10 @@ public class ODSayApiClient {
             // 로컬 IP 정보 가져오기
             java.net.InetAddress localHost = java.net.InetAddress.getLocalHost();
             String hostName = localHost.getHostName();
-            String hostAddress = localHost.getHostAddress();
-            log.info("호출 호스트: {} ({})", hostName, hostAddress);
+            String privateIp = localHost.getHostAddress();
+            String publicIp = getPublicIpAddress();
+            
+            log.info("호출 호스트: {} (프라이빗 IP: {}, 퍼블릭 IP: {})", hostName, privateIp, publicIp);
             
             // API Key 인코딩 - 특수문자 처리 강화
             String encodedApiKey = apiKey.replace("+", "%2B").replace("/", "%2F").replace("=", "%3D");
@@ -72,7 +131,7 @@ public class ODSayApiClient {
             org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
             headers.set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36");
             headers.set("Accept", "application/json");
-            headers.set("X-Forwarded-For", hostAddress);
+            headers.set("X-Forwarded-For", publicIp); // 퍼블릭 IP 사용
             headers.set("Origin", "http://travelonna.shop");
             headers.set("Referer", "http://travelonna.shop/");
             
@@ -125,14 +184,18 @@ public class ODSayApiClient {
      */
     public JsonNode getTrainTerminals(String terminalName, String lang) {
         log.info("ODSay API 호출: 터미널/역 검색 {}, 언어 {}", terminalName, lang);
+        
+        String apiKey = getApiKey();
         log.info("API Key(원본): {}", apiKey);
         
         try {
             // 로컬 IP 정보 가져오기
             java.net.InetAddress localHost = java.net.InetAddress.getLocalHost();
             String hostName = localHost.getHostName();
-            String hostAddress = localHost.getHostAddress();
-            log.info("호출 호스트: {} ({})", hostName, hostAddress);
+            String privateIp = localHost.getHostAddress();
+            String publicIp = getPublicIpAddress();
+            
+            log.info("호출 호스트: {} (프라이빗 IP: {}, 퍼블릭 IP: {})", hostName, privateIp, publicIp);
             
             // API Key 인코딩 - 특수문자 처리 강화
             String encodedApiKey = apiKey.replace("+", "%2B").replace("/", "%2F").replace("=", "%3D");
@@ -151,7 +214,7 @@ public class ODSayApiClient {
             org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
             headers.set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36");
             headers.set("Accept", "application/json");
-            headers.set("X-Forwarded-For", hostAddress);
+            headers.set("X-Forwarded-For", publicIp); // 퍼블릭 IP 사용
             headers.set("Origin", "http://travelonna.shop");
             headers.set("Referer", "http://travelonna.shop/");
             
@@ -205,14 +268,18 @@ public class ODSayApiClient {
      */
     public JsonNode getTrainServiceTime(String startStationID, String endStationID, String lang) {
         log.info("ODSay API 호출: 기차 시간표 조회 출발역ID {}, 도착역ID {}, 언어 {}", startStationID, endStationID, lang);
+        
+        String apiKey = getApiKey();
         log.info("API Key(원본): {}", apiKey);
         
         try {
             // 로컬 IP 정보 가져오기
             java.net.InetAddress localHost = java.net.InetAddress.getLocalHost();
             String hostName = localHost.getHostName();
-            String hostAddress = localHost.getHostAddress();
-            log.info("호출 호스트: {} ({})", hostName, hostAddress);
+            String privateIp = localHost.getHostAddress();
+            String publicIp = getPublicIpAddress();
+            
+            log.info("호출 호스트: {} (프라이빗 IP: {}, 퍼블릭 IP: {})", hostName, privateIp, publicIp);
             
             // API Key 인코딩 - 특수문자 처리 강화
             String encodedApiKey = apiKey.replace("+", "%2B").replace("/", "%2F").replace("=", "%3D");
@@ -232,7 +299,7 @@ public class ODSayApiClient {
             org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
             headers.set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36");
             headers.set("Accept", "application/json");
-            headers.set("X-Forwarded-For", hostAddress);
+            headers.set("X-Forwarded-For", publicIp); // 퍼블릭 IP 사용
             headers.set("Origin", "http://travelonna.shop");
             headers.set("Referer", "http://travelonna.shop/");
             
