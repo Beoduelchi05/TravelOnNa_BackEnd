@@ -23,7 +23,7 @@ public class ODSayApiClient {
 
     private final RestTemplate restTemplate;
     
-    @Value("${odsay.api.key.server}")
+    @Value("${odsay.api.key.uri}")
     private String apiKey;
     
     private static final String BASE_URL = "https://api.odsay.com/v1/api";
