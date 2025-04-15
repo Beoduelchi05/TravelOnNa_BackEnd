@@ -44,6 +44,26 @@ public class ODSayApiClient {
     private static final String EC2_METADATA_URL = "http://169.254.169.254/latest/meta-data/public-ipv4";
     
     /**
+     * API 키의 특수문자만 수동으로 인코딩합니다.
+     * 
+     * @param apiKey 인코딩할 API 키
+     * @return 특수문자가 인코딩된 API 키
+     */
+    private String manualEncodeApiKey(String apiKey) {
+        if (apiKey == null) {
+            return "";
+        }
+        
+        // 특수문자 수동 인코딩 (URL 인코딩 규칙에 따라)
+        String encodedKey = apiKey.replace("+", "%2B")
+                                 .replace("/", "%2F")
+                                 .replace("=", "%3D");
+        
+        log.info("API Key 수동 인코딩: {}", encodedKey);
+        return encodedKey;
+    }
+    
+    /**
      * RestTemplate 인터셉터를 설정하여 요청과 응답 로깅
      */
     @PostConstruct
@@ -188,12 +208,10 @@ public class ODSayApiClient {
             log.info("- 퍼블릭 IP: {}", publicIp);
             log.info("⚠️ 중요: ODSay API 인증을 위해서는 이 퍼블릭 IP({})를 ODSay API 관리자 페이지에 등록해야 합니다!", publicIp);
             
-            // API Key 인코딩 - 특수문자 처리 강화
-            String encodedApiKey = apiKey.replace("+", "%2B").replace("/", "%2F").replace("=", "%3D");
+            // API 키만 특수문자 수동 인코딩
+            String encodedApiKey = manualEncodeApiKey(apiKey);
             
-            log.info("API Key(인코딩): {}", encodedApiKey);
-            
-            // URL 생성
+            // URL 생성 - API 키만 인코딩, 나머지는 그대로 사용
             String urlStr = BASE_URL + "/searchPubTransPath" + 
                          "?apiKey=" + encodedApiKey + 
                          "&SX=" + "" + 
@@ -283,16 +301,14 @@ public class ODSayApiClient {
             log.info("- 퍼블릭 IP: {}", publicIp);
             log.info("⚠️ 중요: ODSay API 인증을 위해서는 이 퍼블릭 IP({})를 ODSay API 관리자 페이지에 등록해야 합니다!", publicIp);
             
-            // API Key 인코딩 - 특수문자 처리 강화
-            String encodedApiKey = apiKey.replace("+", "%2B").replace("/", "%2F").replace("=", "%3D");
+            // API 키만 특수문자 수동 인코딩
+            String encodedApiKey = manualEncodeApiKey(apiKey);
             
-            log.info("API Key(인코딩): {}", encodedApiKey);
-            
-            // URL 생성 - 파라미터 순서 변경: apiKey, lang, terminalName
+            // URL 직접 생성 - API 키만 인코딩, 나머지는 RestTemplate이 자동 인코딩하도록 함
             String urlStr = BASE_URL + "/trainTerminals" + 
-                        "?apiKey=" + encodedApiKey + 
-                        "&lang=" + lang +
-                        "&terminalName=" + terminalName;
+                         "?apiKey=" + encodedApiKey + 
+                         "&lang=" + lang +
+                         "&terminalName=" + terminalName;
             
             log.info("전체 API URL: {}", urlStr);
             
@@ -374,12 +390,10 @@ public class ODSayApiClient {
             log.info("- 퍼블릭 IP: {}", publicIp);
             log.info("⚠️ 중요: ODSay API 인증을 위해서는 이 퍼블릭 IP({})를 ODSay API 관리자 페이지에 등록해야 합니다!", publicIp);
             
-            // API Key 인코딩 - 특수문자 처리 강화
-            String encodedApiKey = apiKey.replace("+", "%2B").replace("/", "%2F").replace("=", "%3D");
+            // API 키만 특수문자 수동 인코딩
+            String encodedApiKey = manualEncodeApiKey(apiKey);
             
-            log.info("API Key(인코딩): {}", encodedApiKey);
-            
-            // URL 생성 - 파라미터 순서: apiKey, lang, startStationID, endStationID
+            // URL 직접 생성 - API 키만 인코딩, 나머지는 RestTemplate이 자동 인코딩하도록 함
             String urlStr = BASE_URL + "/trainServiceTime" + 
                          "?apiKey=" + encodedApiKey + 
                          "&lang=" + lang +
