@@ -35,13 +35,39 @@ public class ODSayApiClient {
     
     private static final String BASE_URL = "https://api.odsay.com/v1/api";
     private static final String PUBLIC_IP_CHECK_URL = "https://checkip.amazonaws.com";
+    private static final String EC2_METADATA_URL = "http://169.254.169.254/latest/meta-data/public-ipv4";
     
     /**
-     * 퍼블릭 IP 주소를 가져옵니다.
+     * EC2 메타데이터에서 퍼블릭 IP 주소를 가져옵니다.
+     * 
+     * @return EC2 퍼블릭 IP 주소 또는 에러 발생 시 외부 서비스로 확인
+     */
+    private String getEC2PublicIp() {
+        try {
+            URL url = new URL(EC2_METADATA_URL);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+            connection.setConnectTimeout(1000); // 짧은 타임아웃 (EC2 아닌 환경에서는 빨리 실패하도록)
+            connection.setReadTimeout(1000);
+            
+            BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+            String publicIp = reader.readLine().trim();
+            reader.close();
+            
+            log.info("EC2 메타데이터에서 퍼블릭 IP 가져옴: {}", publicIp);
+            return publicIp;
+        } catch (Exception e) {
+            log.info("EC2 메타데이터에서 IP 가져오기 실패, 외부 서비스 사용");
+            return getPublicIpFromExternalService();
+        }
+    }
+    
+    /**
+     * 외부 서비스를 통해 퍼블릭 IP 주소를 가져옵니다.
      * 
      * @return 퍼블릭 IP 주소 또는 에러 발생 시 "unknown"
      */
-    private String getPublicIpAddress() {
+    private String getPublicIpFromExternalService() {
         try {
             URL url = new URL(PUBLIC_IP_CHECK_URL);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -53,6 +79,7 @@ public class ODSayApiClient {
             String publicIp = reader.readLine().trim();
             reader.close();
             
+            log.info("외부 서비스에서 퍼블릭 IP 가져옴: {}", publicIp);
             return publicIp;
         } catch (Exception e) {
             log.error("퍼블릭 IP 주소 조회 중 오류 발생", e);
@@ -102,13 +129,17 @@ public class ODSayApiClient {
         String formattedDate = date.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         
         try {
-            // 로컬 IP 정보 가져오기
+            // 퍼블릭 및 프라이빗 IP 정보 가져오기
             java.net.InetAddress localHost = java.net.InetAddress.getLocalHost();
             String hostName = localHost.getHostName();
             String privateIp = localHost.getHostAddress();
-            String publicIp = getPublicIpAddress();
+            String publicIp = getEC2PublicIp();
             
-            log.info("호출 호스트: {} (프라이빗 IP: {}, 퍼블릭 IP: {})", hostName, privateIp, publicIp);
+            log.info("호출 호스트 정보:");
+            log.info("- 호스트명: {}", hostName);
+            log.info("- 프라이빗 IP: {}", privateIp);
+            log.info("- 퍼블릭 IP: {}", publicIp);
+            log.info("⚠️ 중요: ODSay API 인증을 위해서는 이 퍼블릭 IP({})를 ODSay API 관리자 페이지에 등록해야 합니다!", publicIp);
             
             // API Key 인코딩 - 특수문자 처리 강화
             String encodedApiKey = apiKey.replace("+", "%2B").replace("/", "%2F").replace("=", "%3D");
@@ -132,7 +163,6 @@ public class ODSayApiClient {
             org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
             headers.set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36");
             headers.set("Accept", "application/json");
-            headers.set("X-Forwarded-For", publicIp); // 퍼블릭 IP 사용
             headers.set("Origin", "http://travelonna.shop");
             headers.set("Referer", "http://travelonna.shop/");
             
@@ -190,13 +220,17 @@ public class ODSayApiClient {
         log.info("API Key(원본): {}", apiKey);
         
         try {
-            // 로컬 IP 정보 가져오기
+            // 퍼블릭 및 프라이빗 IP 정보 가져오기
             java.net.InetAddress localHost = java.net.InetAddress.getLocalHost();
             String hostName = localHost.getHostName();
             String privateIp = localHost.getHostAddress();
-            String publicIp = getPublicIpAddress();
+            String publicIp = getEC2PublicIp();
             
-            log.info("호출 호스트: {} (프라이빗 IP: {}, 퍼블릭 IP: {})", hostName, privateIp, publicIp);
+            log.info("호출 호스트 정보:");
+            log.info("- 호스트명: {}", hostName);
+            log.info("- 프라이빗 IP: {}", privateIp);
+            log.info("- 퍼블릭 IP: {}", publicIp);
+            log.info("⚠️ 중요: ODSay API 인증을 위해서는 이 퍼블릭 IP({})를 ODSay API 관리자 페이지에 등록해야 합니다!", publicIp);
             
             // API Key 인코딩 - 특수문자 처리 강화
             String encodedApiKey = apiKey.replace("+", "%2B").replace("/", "%2F").replace("=", "%3D");
@@ -273,13 +307,17 @@ public class ODSayApiClient {
         log.info("API Key(원본): {}", apiKey);
         
         try {
-            // 로컬 IP 정보 가져오기
+            // 퍼블릭 및 프라이빗 IP 정보 가져오기
             java.net.InetAddress localHost = java.net.InetAddress.getLocalHost();
             String hostName = localHost.getHostName();
             String privateIp = localHost.getHostAddress();
-            String publicIp = getPublicIpAddress();
+            String publicIp = getEC2PublicIp();
             
-            log.info("호출 호스트: {} (프라이빗 IP: {}, 퍼블릭 IP: {})", hostName, privateIp, publicIp);
+            log.info("호출 호스트 정보:");
+            log.info("- 호스트명: {}", hostName);
+            log.info("- 프라이빗 IP: {}", privateIp);
+            log.info("- 퍼블릭 IP: {}", publicIp);
+            log.info("⚠️ 중요: ODSay API 인증을 위해서는 이 퍼블릭 IP({})를 ODSay API 관리자 페이지에 등록해야 합니다!", publicIp);
             
             // API Key 인코딩 - 특수문자 처리 강화
             String encodedApiKey = apiKey.replace("+", "%2B").replace("/", "%2F").replace("=", "%3D");
@@ -299,7 +337,6 @@ public class ODSayApiClient {
             org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
             headers.set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36");
             headers.set("Accept", "application/json");
-            headers.set("X-Forwarded-For", publicIp); // 퍼블릭 IP 사용
             headers.set("Origin", "http://travelonna.shop");
             headers.set("Referer", "http://travelonna.shop/");
             
