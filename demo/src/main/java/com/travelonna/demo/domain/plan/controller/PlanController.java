@@ -238,6 +238,31 @@ public class PlanController {
         
         return ResponseEntity.ok(ApiResponse.success("교통편 검색 성공", responseDto));
     }
+    
+    @Operation(summary = "역 ID 검색 테스트", description = "역 이름으로 역 ID 정보를 검색합니다. (테스트용)")
+    @GetMapping("/test/station/{stationName}")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> testGetStationId(
+            @PathVariable String stationName) {
+        
+        log.info("역 ID 테스트 검색 요청: 역 이름 {}", stationName);
+        
+        Map<String, Object> stationInfo = oDSayTransportService.getStationIdByName(stationName);
+        
+        return ResponseEntity.ok(ApiResponse.success("역 ID 검색 성공", stationInfo));
+    }
+    
+    @Operation(summary = "기차 시간표 검색 테스트", description = "출발역과 도착역 ID로 기차 시간표를 검색합니다. (테스트용)")
+    @GetMapping("/test/train/{startStationId}/{endStationId}")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> testGetTrainServiceTime(
+            @PathVariable String startStationId,
+            @PathVariable String endStationId) {
+        
+        log.info("기차 시간표 테스트 검색 요청: 출발역 ID {}, 도착역 ID {}", startStationId, endStationId);
+        
+        List<Map<String, Object>> trainServices = oDSayTransportService.getTrainServiceTime(startStationId, endStationId);
+        
+        return ResponseEntity.ok(ApiResponse.success("기차 시간표 검색 성공", trainServices));
+    }
 
     /**
      * 일정 상세 정보 조회

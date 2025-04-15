@@ -46,6 +46,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 // 테스트용으로 일단 로그 API는 인증 없이 허용
                 .requestMatchers("/api/logs/**").permitAll()
+                // 테스트 API 인증 없이 허용
+                .requestMatchers("/api/v1/plans/test/**").permitAll()
                 // 그 외 모든 API는 인증 필요
                 .anyRequest().authenticated()
             )
