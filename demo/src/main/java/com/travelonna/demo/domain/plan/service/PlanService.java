@@ -56,8 +56,14 @@ public class PlanService {
         plan.setMemo(requestDto.getMemo());
         plan.setTotalCost(0); // 초기 비용은 0으로 설정, 장소 추가 시 자동 계산됨
         
+        // 그룹 ID가 있다면 설정
+        if (requestDto.getGroupId() != null) {
+            plan.setGroupId(requestDto.getGroupId());
+            log.info("그룹 일정으로 생성: 그룹 ID {}", requestDto.getGroupId());
+        }
+        
         Plan savedPlan = planRepository.save(plan);
-        log.info("개인 일정이 생성되었습니다. ID: {}", savedPlan.getPlanId());
+        log.info("일정이 생성되었습니다. ID: {}", savedPlan.getPlanId());
         
         return PlanResponseDto.fromEntity(savedPlan);
     }
@@ -168,13 +174,17 @@ public class PlanService {
      */
     @Transactional(readOnly = true)
     public List<PlanResponseDto> getUserPlans(Integer userId) {
-        log.info("사용자 개인 일정 목록 조회: 사용자 ID {}", userId);
+        log.info("사용자 일정 목록 조회: 사용자 ID {}", userId);
         
         List<Plan> plans = planRepository.findByUserId(userId);
         
-        return plans.stream()
+        // 계획 엔티티를 DTO로 변환
+        List<PlanResponseDto> result = plans.stream()
                 .map(PlanResponseDto::fromEntity)
                 .collect(Collectors.toList());
+        
+        log.info("사용자 일정 목록 조회 완료: 총 {}개의 일정", result.size());
+        return result;
     }
     
     /**
