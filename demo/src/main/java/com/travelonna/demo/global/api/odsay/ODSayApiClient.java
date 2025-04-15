@@ -121,29 +121,38 @@ public class ODSayApiClient {
         log.info("API Key(원본): {}", apiKey);
         
         try {
+            // 로컬 IP 정보 가져오기
+            java.net.InetAddress localHost = java.net.InetAddress.getLocalHost();
+            String hostName = localHost.getHostName();
+            String hostAddress = localHost.getHostAddress();
+            log.info("호출 호스트: {} ({})", hostName, hostAddress);
+            
             // API Key 인코딩 - 특수문자 처리 강화
             String encodedApiKey = apiKey.replace("+", "%2B").replace("/", "%2F").replace("=", "%3D");
-            String encodedTerminalName = java.net.URLEncoder.encode(terminalName, "UTF-8");
             
             log.info("API Key(인코딩): {}", encodedApiKey);
             
-            // URL 생성
-            String url = BASE_URL + "/trainTerminals" + 
+            // URL 생성 - terminalName 인코딩 제거
+            String urlStr = BASE_URL + "/trainTerminals" + 
                         "?apiKey=" + encodedApiKey + 
-                        "&terminalName=" + encodedTerminalName;
+                        "&terminalName=" + terminalName +
+                        "&lang=" + lang;
             
-            log.info("전체 API URL: {}", url);
+            log.info("전체 API URL: {}", urlStr);
             
             // HTTP 요청 헤더 추가
             org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
             headers.set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36");
             headers.set("Accept", "application/json");
+            headers.set("X-Forwarded-For", hostAddress);
+            headers.set("Origin", "http://travelonna.shop");
+            headers.set("Referer", "http://travelonna.shop/");
             
             org.springframework.http.HttpEntity<Void> entity = new org.springframework.http.HttpEntity<>(headers);
             
             // API 호출
             ResponseEntity<String> rawResponse = restTemplate.exchange(
-                url,
+                urlStr,
                 org.springframework.http.HttpMethod.GET,
                 entity,
                 String.class
