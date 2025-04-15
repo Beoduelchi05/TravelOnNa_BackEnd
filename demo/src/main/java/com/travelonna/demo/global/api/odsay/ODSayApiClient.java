@@ -36,6 +36,10 @@ public class ODSayApiClient {
     private static final String BASE_URL = "https://api.odsay.com/v1/api";
     private static final String PUBLIC_IP_CHECK_URL = "https://checkip.amazonaws.com";
     
+    // 허용된 IP 주소들
+    private static final String SERVER_IP = "43.201.98.210"; // EC2 서버 IP
+    private static final String SERVICE_DOMAIN = "travelonna.shop"; // 서비스 도메인
+    
     /**
      * 퍼블릭 IP 주소를 가져옵니다.
      * 
@@ -61,16 +65,17 @@ public class ODSayApiClient {
     }
     
     /**
-     * 현재 환경에 맞는 API 키 반환
-     * 개발 환경: server API key
-     * 운영 환경: service API key
+     * 현재 환경과 IP에 맞는 API 키 반환
+     * 서버 IP에서는 server API key 사용
+     * 그 외에는 service API key 사용
      * 
      * @return 현재 환경에 적합한 API 키
      */
     private String getApiKey() {
+        String publicIp = getPublicIpAddress();
         String[] activeProfiles = environment.getActiveProfiles();
-        boolean isProduction = false;
         
+        boolean isProduction = false;
         for (String profile : activeProfiles) {
             if (profile.equals("prod") || profile.equals("production")) {
                 isProduction = true;
@@ -78,7 +83,18 @@ public class ODSayApiClient {
             }
         }
         
-        String apiKey = isProduction ? serviceApiKey : serverApiKey;
+        // 서버 IP 기반 선택 (API 등록된 IP 기반)
+        boolean useServerKey = SERVER_IP.equals(publicIp);
+        
+        String apiKey;
+        if (useServerKey) {
+            apiKey = serverApiKey;
+            log.info("서버 IP({})(으)로 ODSay API 호출, server API 키 사용", publicIp);
+        } else {
+            apiKey = serviceApiKey;
+            log.info("외부 IP({})(으)로 ODSay API 호출, service API 키 사용", publicIp);
+        }
+        
         log.info("현재 환경: {}, 사용 API Key: {}", isProduction ? "운영" : "개발", apiKey.substring(0, 5) + "...");
         return apiKey;
     }
