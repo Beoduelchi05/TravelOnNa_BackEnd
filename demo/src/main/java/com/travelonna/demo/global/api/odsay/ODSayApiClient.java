@@ -2,8 +2,10 @@ package com.travelonna.demo.global.api.odsay;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
@@ -11,7 +13,6 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
-import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.BufferingClientHttpRequestFactory;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -32,6 +33,7 @@ public class ODSayApiClient {
 
     private final RestTemplate restTemplate;
     private final Environment environment;
+    private final ObjectMapper objectMapper;
     
     @Value("${odsay.api.key.server}")
     private String serverApiKey;
@@ -42,26 +44,6 @@ public class ODSayApiClient {
     private static final String BASE_URL = "https://api.odsay.com/v1/api";
     private static final String PUBLIC_IP_CHECK_URL = "https://checkip.amazonaws.com";
     private static final String EC2_METADATA_URL = "http://169.254.169.254/latest/meta-data/public-ipv4";
-    
-    /**
-     * API 키의 특수문자만 수동으로 인코딩합니다.
-     * 
-     * @param apiKey 인코딩할 API 키
-     * @return 특수문자가 인코딩된 API 키
-     */
-    private String manualEncodeApiKey(String apiKey) {
-        if (apiKey == null) {
-            return "";
-        }
-        
-        // 특수문자 수동 인코딩 (URL 인코딩 규칙에 따라)
-        String encodedKey = apiKey.replace("+", "%2B")
-                                 .replace("/", "%2F")
-                                 .replace("=", "%3D");
-        
-        log.info("API Key 수동 인코딩: {}", encodedKey);
-        return encodedKey;
-    }
     
     /**
      * RestTemplate 인터셉터를 설정하여 요청과 응답 로깅
@@ -179,6 +161,85 @@ public class ODSayApiClient {
     }
     
     /**
+     * 직접 HttpURLConnection을 사용하여 API 호출
+     * 
+     * @param urlStr API URL
+     * @return API 응답 (JSON)
+     */
+    private JsonNode callApiWithUrlConnection(String urlStr) {
+        try {
+            log.info("API 호출: {}", urlStr);
+            URL url = new URL(urlStr);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+            connection.setConnectTimeout(10000);
+            connection.setReadTimeout(10000);
+            
+            // 헤더 설정
+            connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36");
+            connection.setRequestProperty("Accept", "application/json");
+            connection.setRequestProperty("Origin", "http://travelonna.shop");
+            connection.setRequestProperty("Referer", "http://travelonna.shop/");
+            
+            log.info("===== API 요청 정보 =====");
+            log.info("요청 URL: {}", urlStr);
+            log.info("요청 메소드: GET");
+            log.info("요청 헤더:");
+            connection.getRequestProperties().forEach((key, value) -> log.info("  - {}: {}", key, value));
+            
+            // 응답 코드 확인
+            int responseCode = connection.getResponseCode();
+            log.info("응답 코드: {}", responseCode);
+            
+            // 응답 읽기
+            StringBuilder response = new StringBuilder();
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+                BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+                String inputLine;
+                
+                while ((inputLine = in.readLine()) != null) {
+                    response.append(inputLine);
+                }
+                in.close();
+                
+                String responseBody = response.toString();
+                log.info("API 응답(원본): {}", responseBody);
+                
+                // JSON 파싱
+                if (responseBody != null && !responseBody.isEmpty()) {
+                    JsonNode jsonResponse = objectMapper.readTree(responseBody);
+                    
+                    // 에러 응답인지 확인
+                    if (jsonResponse.has("error")) {
+                        log.error("API 에러 응답: {}", jsonResponse.get("error"));
+                    }
+                    
+                    return jsonResponse;
+                } else {
+                    log.error("응답 본문이 비어 있습니다.");
+                    return null;
+                }
+            } else {
+                // 에러 응답 처리
+                BufferedReader err = new BufferedReader(new InputStreamReader(connection.getErrorStream()));
+                String errLine;
+                
+                while ((errLine = err.readLine()) != null) {
+                    response.append(errLine);
+                }
+                err.close();
+                
+                log.error("API 응답 코드 오류: {}, 응답: {}", responseCode, response.toString());
+                return null;
+            }
+        } catch (Exception e) {
+            log.error("API 호출 중 오류 발생", e);
+            e.printStackTrace();
+            return null;
+        }
+    }
+    
+    /**
      * 출발지와 도착지로 대중교통 정보 조회
      * 
      * @param srcName 출발지 이름
@@ -208,66 +269,21 @@ public class ODSayApiClient {
             log.info("- 퍼블릭 IP: {}", publicIp);
             log.info("⚠️ 중요: ODSay API 인증을 위해서는 이 퍼블릭 IP({})를 ODSay API 관리자 페이지에 등록해야 합니다!", publicIp);
             
-            // API 키만 특수문자 수동 인코딩
-            String encodedApiKey = manualEncodeApiKey(apiKey);
+            // URL 직접 구성 (수동 인코딩)
+            String encodedSrcName = encode(srcName);
+            String encodedDstName = encode(dstName);
             
-            // URL 생성 - API 키만 인코딩, 나머지는 그대로 사용
-            String urlStr = BASE_URL + "/searchPubTransPath" + 
-                         "?apiKey=" + encodedApiKey + 
-                         "&SX=" + "" + 
-                         "&SY=" + "" + 
-                         "&EX=" + "" + 
-                         "&EY=" + "" + 
-                         "&OPT=" + getOptByTransportType(transportType) + 
-                         "&SearchPathType=0" + 
-                         "&SearchDate=" + formattedDate;
+            String urlStr = BASE_URL + "/searchPubTransPath"
+                    + "?apiKey=" + apiKey
+                    + "&SX="
+                    + "&SY="
+                    + "&EX="
+                    + "&EY="
+                    + "&OPT=" + getOptByTransportType(transportType)
+                    + "&SearchPathType=0"
+                    + "&SearchDate=" + formattedDate;
             
-            log.info("전체 API URL: {}", urlStr);
-            
-            // HTTP 요청 헤더 추가
-            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
-            headers.set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36");
-            headers.set("Accept", "application/json");
-            headers.set("Origin", "http://travelonna.shop");
-            headers.set("Referer", "http://travelonna.shop/");
-            
-            org.springframework.http.HttpEntity<Void> entity = new org.springframework.http.HttpEntity<>(headers);
-            
-            log.info("===== API 호출 시작: searchPubTransPath =====");
-            
-            // API 호출
-            ResponseEntity<String> rawResponse = restTemplate.exchange(
-                urlStr,
-                org.springframework.http.HttpMethod.GET,
-                entity,
-                String.class
-            );
-            
-            log.info("===== API 호출 완료: searchPubTransPath =====");
-            
-            if (rawResponse.getStatusCode().is2xxSuccessful()) {
-                log.info("ODSay API 응답(원본): {}", rawResponse.getBody());
-                
-                // 응답이 null이나 비어있는지 확인
-                if (rawResponse.getBody() == null || rawResponse.getBody().isEmpty()) {
-                    log.error("응답 본문이 비어 있습니다.");
-                    return null;
-                }
-                
-                // ObjectMapper를 사용하여 String을 JsonNode로 변환
-                ObjectMapper objectMapper = new ObjectMapper();
-                JsonNode jsonResponse = objectMapper.readTree(rawResponse.getBody());
-                
-                // 에러 응답인지 확인
-                if (jsonResponse.has("error")) {
-                    log.error("ODSay API 에러 응답: {}", jsonResponse.get("error"));
-                }
-                
-                return jsonResponse;
-            } else {
-                log.error("ODSay API 응답 코드 오류: {}", rawResponse.getStatusCodeValue());
-                return null;
-            }
+            return callApiWithUrlConnection(urlStr);
         } catch (Exception e) {
             log.error("대중교통 정보 조회 API 호출 중 오류 발생", e);
             e.printStackTrace();
@@ -301,61 +317,16 @@ public class ODSayApiClient {
             log.info("- 퍼블릭 IP: {}", publicIp);
             log.info("⚠️ 중요: ODSay API 인증을 위해서는 이 퍼블릭 IP({})를 ODSay API 관리자 페이지에 등록해야 합니다!", publicIp);
             
-            // API 키만 특수문자 수동 인코딩
-            String encodedApiKey = manualEncodeApiKey(apiKey);
+            // URL 구성 - 한글 파라미터 인코딩
+            String encodedTerminalName = encode(terminalName);
+            log.info("인코딩 전 역 이름: {}, 인코딩 후: {}", terminalName, encodedTerminalName);
             
-            // URL 직접 생성 - API 키만 인코딩, 나머지는 RestTemplate이 자동 인코딩하도록 함
-            String urlStr = BASE_URL + "/trainTerminals" + 
-                         "?apiKey=" + encodedApiKey + 
-                         "&lang=" + lang +
-                         "&terminalName=" + terminalName;
+            String urlStr = BASE_URL + "/trainTerminals" 
+                    + "?apiKey=" + apiKey
+                    + "&lang=" + lang
+                    + "&terminalName=" + encodedTerminalName;
             
-            log.info("전체 API URL: {}", urlStr);
-            
-            // HTTP 요청 헤더 추가
-            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
-            headers.set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36");
-            headers.set("Accept", "application/json");
-            headers.set("Origin", "http://travelonna.shop");
-            headers.set("Referer", "http://travelonna.shop/");
-            
-            org.springframework.http.HttpEntity<Void> entity = new org.springframework.http.HttpEntity<>(headers);
-            
-            log.info("===== API 호출 시작: trainTerminals =====");
-            
-            // API 호출
-            ResponseEntity<String> rawResponse = restTemplate.exchange(
-                urlStr,
-                org.springframework.http.HttpMethod.GET,
-                entity,
-                String.class
-            );
-            
-            log.info("===== API 호출 완료: trainTerminals =====");
-            
-            if (rawResponse.getStatusCode().is2xxSuccessful()) {
-                log.info("ODSay API 응답(원본): {}", rawResponse.getBody());
-                
-                // 응답이 null이나 비어있는지 확인
-                if (rawResponse.getBody() == null || rawResponse.getBody().isEmpty()) {
-                    log.error("응답 본문이 비어 있습니다.");
-                    return null;
-                }
-                
-                // ObjectMapper를 사용하여 String을 JsonNode로 변환
-                ObjectMapper objectMapper = new ObjectMapper();
-                JsonNode jsonResponse = objectMapper.readTree(rawResponse.getBody());
-                
-                // 에러 응답인지 확인
-                if (jsonResponse.has("error")) {
-                    log.error("ODSay API 에러 응답: {}", jsonResponse.get("error"));
-                }
-                
-                return jsonResponse;
-            } else {
-                log.error("ODSay API 응답 코드 오류: {}", rawResponse.getStatusCodeValue());
-                return null;
-            }
+            return callApiWithUrlConnection(urlStr);
         } catch (Exception e) {
             log.error("터미널/역 검색 API 호출 중 오류 발생", e);
             e.printStackTrace();
@@ -390,62 +361,15 @@ public class ODSayApiClient {
             log.info("- 퍼블릭 IP: {}", publicIp);
             log.info("⚠️ 중요: ODSay API 인증을 위해서는 이 퍼블릭 IP({})를 ODSay API 관리자 페이지에 등록해야 합니다!", publicIp);
             
-            // API 키만 특수문자 수동 인코딩
-            String encodedApiKey = manualEncodeApiKey(apiKey);
+            // URL 직접 구성
+            String urlStr = BASE_URL + "/trainServiceTime"
+                    + "?apiKey=" + apiKey
+                    + "&lang=" + lang
+                    + "&startStationID=" + startStationID
+                    + "&endStationID=" + endStationID;
             
-            // URL 직접 생성 - API 키만 인코딩, 나머지는 RestTemplate이 자동 인코딩하도록 함
-            String urlStr = BASE_URL + "/trainServiceTime" + 
-                         "?apiKey=" + encodedApiKey + 
-                         "&lang=" + lang +
-                         "&startStationID=" + startStationID + 
-                         "&endStationID=" + endStationID;
-            
-            log.info("전체 API URL: {}", urlStr);
-            
-            // HTTP 요청 헤더 추가
-            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
-            headers.set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36");
-            headers.set("Accept", "application/json");
-            headers.set("Origin", "http://travelonna.shop");
-            headers.set("Referer", "http://travelonna.shop/");
-            
-            org.springframework.http.HttpEntity<Void> entity = new org.springframework.http.HttpEntity<>(headers);
-            
-            log.info("===== API 호출 시작: trainServiceTime =====");
-            
-            // API 호출
-            ResponseEntity<String> rawResponse = restTemplate.exchange(
-                urlStr,
-                org.springframework.http.HttpMethod.GET,
-                entity,
-                String.class
-            );
-            
-            log.info("===== API 호출 완료: trainServiceTime =====");
-            
-            if (rawResponse.getStatusCode().is2xxSuccessful()) {
-                log.info("ODSay API 응답(원본): {}", rawResponse.getBody());
-                
-                // 응답이 null이나 비어있는지 확인
-                if (rawResponse.getBody() == null || rawResponse.getBody().isEmpty()) {
-                    log.error("응답 본문이 비어 있습니다.");
-                    return null;
-                }
-                
-                // ObjectMapper를 사용하여 String을 JsonNode로 변환
-                ObjectMapper objectMapper = new ObjectMapper();
-                JsonNode jsonResponse = objectMapper.readTree(rawResponse.getBody());
-                
-                // 에러 응답인지 확인
-                if (jsonResponse.has("error")) {
-                    log.error("ODSay API 에러 응답: {}", jsonResponse.get("error"));
-                }
-                
-                return jsonResponse;
-            } else {
-                log.error("ODSay API 응답 코드 오류: {}", rawResponse.getStatusCodeValue());
-                return null;
-            }
+            log.info("기차 시간표 조회 API URL: {}", urlStr);
+            return callApiWithUrlConnection(urlStr);
         } catch (Exception e) {
             log.error("기차 시간표 조회 API 호출 중 오류 발생", e);
             e.printStackTrace();
@@ -467,5 +391,134 @@ public class ODSayApiClient {
             case "car" -> "4"; // 자동차
             default -> "0"; // 기타(전체)
         };
+    }
+    
+    /**
+     * 문자열을 URL 인코딩합니다.
+     * 
+     * @param value 인코딩할 문자열
+     * @return 인코딩된 문자열
+     */
+    private String encode(String value) {
+        try {
+            if (value == null) {
+                return "";
+            }
+            return URLEncoder.encode(value, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            log.error("URL 인코딩 중 오류 발생", e);
+            return value;
+        }
+    }
+    
+    /**
+     * 고속버스 터미널 ID 조회
+     * 
+     * @param terminalName 터미널 이름 (예: "동서울", "서울", "대구" 등)
+     * @param lang 언어 코드 (0: 국문)
+     * @return API 응답 (JSON)
+     */
+    public JsonNode getExpressBusTerminals(String terminalName, String lang) {
+        log.info("ODSay API 호출: 고속버스 터미널 검색 {}, 언어 {}", terminalName, lang);
+        
+        String apiKey = getApiKey();
+        log.info("API Key(원본): {}", apiKey);
+        
+        try {
+            // 퍼블릭 및 프라이빗 IP 정보 가져오기
+            java.net.InetAddress localHost = java.net.InetAddress.getLocalHost();
+            String hostName = localHost.getHostName();
+            String privateIp = localHost.getHostAddress();
+            String publicIp = getEC2PublicIp();
+            
+            log.info("호출 호스트 정보:");
+            log.info("- 호스트명: {}", hostName);
+            log.info("- 프라이빗 IP: {}", privateIp);
+            log.info("- 퍼블릭 IP: {}", publicIp);
+            log.info("⚠️ 중요: ODSay API 인증을 위해서는 이 퍼블릭 IP({})를 ODSay API 관리자 페이지에 등록해야 합니다!", publicIp);
+            
+            // URL 구성 - 한글 파라미터 인코딩
+            String encodedTerminalName = encode(terminalName);
+            log.info("인코딩 전 터미널 이름: {}, 인코딩 후: {}", terminalName, encodedTerminalName);
+            
+            String urlStr = BASE_URL + "/expressBusTerminals" 
+                    + "?apiKey=" + apiKey
+                    + "&lang=" + lang
+                    + "&terminalName=" + encodedTerminalName;
+            
+            return callApiWithUrlConnection(urlStr);
+        } catch (Exception e) {
+            log.error("고속버스 터미널 검색 API 호출 중 오류 발생", e);
+            e.printStackTrace();
+            return null;
+        }
+    }
+    
+    /**
+     * 고속버스 시간표 조회
+     * 
+     * @param startStationID 출발 터미널 ID
+     * @param endStationID 도착 터미널 ID
+     * @param searchDate 검색 날짜 (yyyyMMdd 형식)
+     * @param lang 언어 코드 (0: 국문)
+     * @return API 응답 (JSON)
+     */
+    public JsonNode getExpressBusServiceTime(String startStationID, String endStationID, String searchDate, String lang) {
+        log.info("ODSay API 호출: 고속버스 시간표 조회 출발역ID {}, 도착역ID {}, 날짜 {}, 언어 {}", 
+                startStationID, endStationID, searchDate, lang);
+        
+        String apiKey = getApiKey();
+        
+        try {
+            // 퍼블릭 및 프라이빗 IP 정보 가져오기
+            java.net.InetAddress localHost = java.net.InetAddress.getLocalHost();
+            String hostName = localHost.getHostName();
+            String privateIp = localHost.getHostAddress();
+            String publicIp = getEC2PublicIp();
+            
+            log.info("호출 호스트 정보:");
+            log.info("- 호스트명: {}", hostName);
+            log.info("- 프라이빗 IP: {}", privateIp);
+            log.info("- 퍼블릭 IP: {}", publicIp);
+            
+            // URL 직접 구성 - 실제 API 요구사항에 맞게 파라미터 이름 구성
+            String urlStr = BASE_URL + "/expressServiceTime"
+                    + "?apiKey=" + apiKey
+                    + "&lang=" + lang
+                    + "&startStationID=" + startStationID
+                    + "&endStationID=" + endStationID;
+            
+            // 날짜가 있으면 추가
+            if (searchDate != null && !searchDate.isEmpty()) {
+                urlStr += "&searchDate=" + searchDate;
+            }
+            
+            log.info("고속버스 시간표 조회 API URL: {}", urlStr.replaceAll(apiKey, "API_KEY_MASKED"));
+            JsonNode response = callApiWithUrlConnection(urlStr);
+            
+            // 응답 디버깅용 로깅
+            if (response != null) {
+                if (response.has("result") && response.get("result").has("station")) {
+                    JsonNode stations = response.get("result").get("station");
+                    log.info("응답 정보: station 필드 있음, 개수: {}", stations.size());
+                    
+                    if (stations.isArray() && stations.size() > 0) {
+                        JsonNode firstStation = stations.get(0);
+                        if (firstStation.has("schedule")) {
+                            String scheduleStr = firstStation.get("schedule").asText();
+                            log.info("첫 시간표 샘플: {}", scheduleStr.length() > 50 ? scheduleStr.substring(0, 50) + "..." : scheduleStr);
+                        }
+                    }
+                } else {
+                    log.warn("응답에 station 필드가 없거나 유효하지 않습니다.");
+                }
+            }
+            
+            return response;
+        } catch (Exception e) {
+            log.error("고속버스 시간표 조회 API 호출 중 오류 발생", e);
+            e.printStackTrace();
+            return null;
+        }
     }
 } 

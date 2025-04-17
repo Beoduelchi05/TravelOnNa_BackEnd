@@ -233,7 +233,7 @@ public class PlanController {
         TransportationResponseDto responseDto = oDSayTransportService.searchTransportation(
                 requestDto.getSource(), 
                 requestDto.getDestination(), 
-                requestDto.getDepartureDate(), 
+                requestDto.getDepartureDate(),
                 requestDto.getTransportType());
         
         return ResponseEntity.ok(ApiResponse.success("교통편 검색 성공", responseDto));
