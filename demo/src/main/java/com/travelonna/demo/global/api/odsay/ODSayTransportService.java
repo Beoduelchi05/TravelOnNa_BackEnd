@@ -36,21 +36,16 @@ public class ODSayTransportService {
     public TransportationResponseDto searchTransportation(String source, String destination, LocalDate date, TransportInfo transportType) {
         String transportTypeStr = transportType != null ? transportType.name() : null;
         
-        log.info("교통편 검색: 출발지 {}, 도착지 {}, 날짜 {}, 교통수단 {}", source, destination, date, transportTypeStr);
-        
         try {
             // 교통 수단이 train인 경우 역 ID로 열차 시간표 조회
             if (transportType == TransportInfo.train) {
-                log.info("열차 시간표 조회 시작");
                 return searchTrainSchedule(source, destination, date);
             }
             
             // train이 아닌 경우에는 현재 지원하지 않음
-            log.warn("지원하지 않는 교통 수단: {}", transportTypeStr);
             return createEmptyResponse(source, destination, date, transportTypeStr);
             
         } catch (Exception e) {
-            log.error("교통편 검색 중 오류 발생", e);
             return createEmptyResponse(source, destination, date, transportTypeStr);
         }
     }
@@ -64,32 +59,24 @@ public class ODSayTransportService {
      * @return 열차 시간표 정보
      */
     private TransportationResponseDto searchTrainSchedule(String source, String destination, LocalDate date) {
-        log.info("열차 시간표 검색: 출발역 {}, 도착역 {}, 날짜 {}", source, destination, date);
-        
         // 출발역 ID 조회
         Map<String, Object> sourceStationInfo = getStationIdByName(source);
         if (sourceStationInfo.isEmpty() || !sourceStationInfo.containsKey("stationID")) {
-            log.warn("출발역 ID 조회 실패: {}", source);
             return createEmptyResponse(source, destination, date, "train");
         }
         String sourceStationId = sourceStationInfo.get("stationID").toString();
-        log.info("출발역 ID 조회 성공: {} -> {}", source, sourceStationId);
         
         // 도착역 ID 조회
         Map<String, Object> destStationInfo = getStationIdByName(destination);
         if (destStationInfo.isEmpty() || !destStationInfo.containsKey("stationID")) {
-            log.warn("도착역 ID 조회 실패: {}", destination);
             return createEmptyResponse(source, destination, date, "train");
         }
         String destStationId = destStationInfo.get("stationID").toString();
-        log.info("도착역 ID 조회 성공: {} -> {}", destination, destStationId);
         
         // 열차 시간표 조회
         List<Map<String, Object>> trainSchedules = getTrainServiceTime(sourceStationId, destStationId);
-        log.info("열차 시간표 조회 결과: {}개의 운행정보", trainSchedules.size());
         
         if (trainSchedules.isEmpty()) {
-            log.warn("열차 시간표 없음");
             return createEmptyResponse(source, destination, date, "train");
         }
         
@@ -131,7 +118,7 @@ public class ODSayTransportService {
                         int minutes = Integer.parseInt(parts[1]);
                         totalMinutes = hours * 60 + minutes;
                     } catch (NumberFormatException e) {
-                        log.warn("운행시간 형식 오류: {}", runningTime);
+                        // 운행시간 형식 오류
                     }
                 }
             }
@@ -164,20 +151,16 @@ public class ODSayTransportService {
      * @return 역 ID, 역 이름, 좌표 등의 정보를 포함한 Map (역을 찾을 수 없는 경우 빈 Map 반환)
      */
     public Map<String, Object> getStationIdByName(String terminalName) {
-        log.info("역 ID 조회 시작: {}", terminalName);
         Map<String, Object> result = new HashMap<>();
         
         try {
             JsonNode response = odSayApiClient.getTrainTerminals(terminalName, "0");
-            log.info("역 ID 조회 응답: {}", response);
             
             if (response == null) {
-                log.warn("역 ID 조회 실패: 응답이 null입니다");
                 return result;
             }
             
             if (response.has("error")) {
-                log.warn("역 ID 조회 실패: API 에러 - {}", response.get("error"));
                 return result;
             }
             
@@ -185,24 +168,20 @@ public class ODSayTransportService {
                 JsonNode resultNode = response.get("result");
                 
                 if (resultNode == null || resultNode.isNull()) {
-                    log.warn("역 ID 조회 실패: result 노드가 null입니다");
                     return result;
                 }
                 
                 if (!resultNode.isArray()) {
-                    log.warn("역 ID 조회 실패: result 노드가 배열이 아닙니다");
                     return result;
                 }
                 
                 int stationCount = resultNode.size();
-                log.info("조회된 역 수: {}", stationCount);
                 
                 if (stationCount > 0) {
                     JsonNode station = resultNode.get(0);
                     
                     if (!station.has("stationID") || !station.has("stationName") || 
                         !station.has("x") || !station.has("y")) {
-                        log.warn("역 ID 조회 실패: 필수 필드(stationID, stationName, x, y)가 없습니다");
                         return result;
                     }
                     
@@ -211,23 +190,13 @@ public class ODSayTransportService {
                     result.put("x", station.get("x").asDouble());
                     result.put("y", station.get("y").asDouble());
                     
-                    log.info("첫 번째 역 정보: ID={}, 이름={}", 
-                        station.get("stationID").asText(), 
-                        station.get("stationName").asText());
-                    
                     // arrivalTerminals 정보 처리는 제외 (사용하지 않음)
-                } else {
-                    log.warn("역 ID 조회 실패: 조회된 역 정보가 없습니다");
                 }
-            } else {
-                log.warn("역 ID 조회 실패: result 필드가 없습니다");
             }
         } catch (Exception e) {
-            log.error("역 ID 조회 중 오류 발생", e);
-            e.printStackTrace();
+            // 예외 발생 시 빈 결과 반환
         }
         
-        log.info("역 ID 조회 완료: {} -> {}", terminalName, result);
         return result;
     }
     
@@ -239,20 +208,16 @@ public class ODSayTransportService {
      * @return 기차 시간표 정보를 포함한 Map
      */
     public List<Map<String, Object>> getTrainServiceTime(String startStationID, String endStationID) {
-        log.info("기차 시간표 조회 시작: 출발역 ID {}, 도착역 ID {}", startStationID, endStationID);
         List<Map<String, Object>> result = new ArrayList<>();
         
         try {
             JsonNode response = odSayApiClient.getTrainServiceTime(startStationID, endStationID, "0");
-            log.info("기차 시간표 조회 응답: {}", response);
             
             if (response == null) {
-                log.warn("기차 시간표 조회 실패: 응답이 null입니다");
                 return result;
             }
             
             if (response.has("error")) {
-                log.warn("기차 시간표 조회 실패: API 에러 - {}", response.get("error"));
                 return result;
             }
             
@@ -262,7 +227,6 @@ public class ODSayTransportService {
                 // station 필드 확인 (신규 API 응답 형식)
                 if (resultNode.has("station") && resultNode.get("station").isArray()) {
                     JsonNode stations = resultNode.get("station");
-                    log.info("조회된 기차 시간표 수: {}", stations.size());
                     
                     for (JsonNode station : stations) {
                         Map<String, Object> serviceInfo = new HashMap<>();
@@ -279,7 +243,7 @@ public class ODSayTransportService {
                             try {
                                 fare = Integer.parseInt(station.get("fare").get("general").asText());
                             } catch (NumberFormatException e) {
-                                log.warn("요금 파싱 오류: {}", station.get("fare").get("general").asText());
+                                // 요금 파싱 오류
                             }
                         }
                         
@@ -299,9 +263,6 @@ public class ODSayTransportService {
                         serviceInfo.put("trainNo", trainNo);
                         serviceInfo.put("runDay", runDay);
                         
-                        log.info("기차 시간표 항목: {} {}→{} (소요: {}, 요금: {}원)", 
-                            trainClass, departureTime, arrivalTime, wasteTime, fare);
-                        
                         result.add(serviceInfo);
                     }
                     return result;
@@ -310,7 +271,6 @@ public class ODSayTransportService {
                 // trainServices 필드 확인 (기존 API 응답 형식 처리)
                 if (resultNode.has("trainServices")) {
                     JsonNode trainServices = resultNode.get("trainServices");
-                    log.info("조회된 기차 시간표 수: {}", trainServices.size());
                     
                     if (trainServices != null && trainServices.isArray()) {
                         for (JsonNode service : trainServices) {
@@ -328,43 +288,16 @@ public class ODSayTransportService {
                             serviceInfo.put("runningTime", runningTime);
                             serviceInfo.put("fare", fare);
                             
-                            log.info("기차 시간표 항목: {} {}→{} (소요: {}, 요금: {}원)", 
-                                traingradeName, departureTime, arrivalTime, runningTime, fare);
-                            
                             result.add(serviceInfo);
                         }
-                    } else {
-                        log.warn("기차 시간표 조회 실패: 조회된 시간표가 없거나 배열이 아닙니다");
                     }
-                } else {
-                    log.warn("기차 시간표 조회 실패: trainServices나 station 필드가 없습니다");
                 }
-            } else {
-                log.warn("기차 시간표 조회 실패: result 필드가 없습니다");
             }
         } catch (Exception e) {
-            log.error("기차 시간표 조회 중 오류 발생", e);
-            e.printStackTrace();
+            // 예외 발생 시 빈 결과 반환
         }
         
-        log.info("기차 시간표 조회 완료: 총 {}개 항목", result.size());
         return result;
-    }
-    
-    /**
-     * 교통 수단 유형 번호에 따른 이름 반환
-     */
-    private String getTrafficTypeName(int trafficType) {
-        return switch (trafficType) {
-            case 1 -> "지하철";
-            case 2 -> "버스";
-            case 3 -> "도보";
-            case 4 -> "기차";
-            case 5 -> "항공";
-            case 6 -> "페리";
-            case 7 -> "택시";
-            default -> "기타";
-        };
     }
     
     /**
