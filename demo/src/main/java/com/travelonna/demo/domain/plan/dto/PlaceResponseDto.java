@@ -1,9 +1,12 @@
 package com.travelonna.demo.domain.plan.dto;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.lang.reflect.Field;
 
 import com.travelonna.demo.domain.plan.entity.Place;
+import com.travelonna.demo.domain.plan.entity.Plan;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
@@ -57,45 +60,93 @@ public class PlaceResponseDto {
     private String googleId;
     
     public static PlaceResponseDto fromEntity(Place place) {
-        return PlaceResponseDto.builder()
-                .id(place.getPlaceId())
-                .name(place.getName())
-                .address(place.getPlace())
-                .order(place.getOrder())
-                .isPublic(place.getIsPublic())
-                .visitDate(place.getVisitDate())
-                .cost(place.getPlaceCost())
-                .memo(place.getMemo())
-                .lat(place.getLat())
-                .lon(place.getLon())
-                .googleId(place.getGoogleId())
-                .build();
+        PlaceResponseDto dto = new PlaceResponseDto();
+        
+        try {
+            // 리플렉션을 사용하여 Place 필드에 접근
+            Field placeIdField = place.getClass().getDeclaredField("placeId");
+            placeIdField.setAccessible(true);
+            dto.id = (Integer) placeIdField.get(place);
+            
+            Field nameField = place.getClass().getDeclaredField("name");
+            nameField.setAccessible(true);
+            dto.name = (String) nameField.get(place);
+            
+            Field placeField = place.getClass().getDeclaredField("place");
+            placeField.setAccessible(true);
+            dto.address = (String) placeField.get(place);
+            
+            Field orderField = place.getClass().getDeclaredField("order");
+            orderField.setAccessible(true);
+            dto.order = (Integer) orderField.get(place);
+            
+            Field isPublicField = place.getClass().getDeclaredField("isPublic");
+            isPublicField.setAccessible(true);
+            dto.isPublic = (Boolean) isPublicField.get(place);
+            
+            Field visitDateField = place.getClass().getDeclaredField("visitDate");
+            visitDateField.setAccessible(true);
+            dto.visitDate = (LocalDateTime) visitDateField.get(place);
+            
+            Field placeCostField = place.getClass().getDeclaredField("placeCost");
+            placeCostField.setAccessible(true);
+            dto.cost = (Integer) placeCostField.get(place);
+            
+            Field memoField = place.getClass().getDeclaredField("memo");
+            memoField.setAccessible(true);
+            dto.memo = (String) memoField.get(place);
+            
+            Field latField = place.getClass().getDeclaredField("lat");
+            latField.setAccessible(true);
+            dto.lat = (String) latField.get(place);
+            
+            Field lonField = place.getClass().getDeclaredField("lon");
+            lonField.setAccessible(true);
+            dto.lon = (String) lonField.get(place);
+            
+            Field googleIdField = place.getClass().getDeclaredField("googleId");
+            googleIdField.setAccessible(true);
+            dto.googleId = (String) googleIdField.get(place);
+            
+        } catch (Exception e) {
+            // 에러 처리
+            e.printStackTrace();
+        }
+        
+        return dto;
     }
     
     public static PlaceResponseDto fromEntityWithDay(Place place) {
-        Integer day = null;
+        PlaceResponseDto dto = fromEntity(place);
         
-        if (place.getPlan().getStartDate() != null && place.getVisitDate() != null) {
-            // Plan의 startDate는 LocalDate, Place의 visitDate는 LocalDateTime이므로 변환 필요
-            day = (int) ChronoUnit.DAYS.between(
-                place.getPlan().getStartDate(), 
-                place.getVisitDate().toLocalDate()
-            ) + 1; // 시작 날짜를 day 1로 계산
+        try {
+            // Plan 접근
+            Field planField = place.getClass().getDeclaredField("plan");
+            planField.setAccessible(true);
+            Plan plan = (Plan) planField.get(place);
+            
+            // visitDate 가져오기
+            Field visitDateField = place.getClass().getDeclaredField("visitDate");
+            visitDateField.setAccessible(true);
+            LocalDateTime visitDate = (LocalDateTime) visitDateField.get(place);
+            
+            // Plan의 startDate 가져오기
+            if (plan != null && visitDate != null) {
+                Field startDateField = plan.getClass().getDeclaredField("startDate");
+                startDateField.setAccessible(true);
+                LocalDate startDate = (LocalDate) startDateField.get(plan);
+                
+                if (startDate != null) {
+                    // 여행 일차 계산
+                    int day = (int) ChronoUnit.DAYS.between(startDate, visitDate.toLocalDate()) + 1;
+                    dto.day = day;
+                }
+            }
+        } catch (Exception e) {
+            // 에러 처리
+            e.printStackTrace();
         }
         
-        return PlaceResponseDto.builder()
-                .id(place.getPlaceId())
-                .name(place.getName())
-                .address(place.getPlace())
-                .order(place.getOrder())
-                .isPublic(place.getIsPublic())
-                .visitDate(place.getVisitDate())
-                .day(day)
-                .cost(place.getPlaceCost())
-                .memo(place.getMemo())
-                .lat(place.getLat())
-                .lon(place.getLon())
-                .googleId(place.getGoogleId())
-                .build();
+        return dto;
     }
 } 
