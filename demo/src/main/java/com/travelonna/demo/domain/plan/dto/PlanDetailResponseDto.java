@@ -9,7 +9,6 @@ import com.travelonna.demo.domain.plan.entity.Plan;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -72,69 +71,44 @@ public class PlanDetailResponseDto {
     public static PlanDetailResponseDto fromEntity(Plan plan, List<PlaceResponseDto> places) {
         PlanDetailResponseDto dto = new PlanDetailResponseDto();
         
-        // Lombok이 생성한 getter 메소드가 컴파일러에서 인식되지 않는 문제를 해결하기 위해
-        // 우회적인 방법으로 값을 설정합니다
         try {
-            java.lang.reflect.Field planIdField = plan.getClass().getDeclaredField("planId");
-            planIdField.setAccessible(true);
-            dto.planId = (Integer) planIdField.get(plan);
+            // 리플렉션 대신 직접 getter 메소드 호출
+            dto.planId = plan.getPlanId();
+            dto.userId = plan.getUserId();
+            dto.title = plan.getTitle();
+            dto.location = plan.getLocation();
+            dto.startDate = plan.getStartDate();
+            dto.endDate = plan.getEndDate();
             
-            java.lang.reflect.Field userIdField = plan.getClass().getDeclaredField("userId");
-            userIdField.setAccessible(true);
-            dto.userId = (Integer) userIdField.get(plan);
-            
-            java.lang.reflect.Field titleField = plan.getClass().getDeclaredField("title");
-            titleField.setAccessible(true);
-            dto.title = (String) titleField.get(plan);
-            
-            java.lang.reflect.Field locationField = plan.getClass().getDeclaredField("location");
-            locationField.setAccessible(true);
-            dto.location = (String) locationField.get(plan);
-            
-            java.lang.reflect.Field startDateField = plan.getClass().getDeclaredField("startDate");
-            startDateField.setAccessible(true);
-            dto.startDate = (LocalDate) startDateField.get(plan);
-            
-            java.lang.reflect.Field endDateField = plan.getClass().getDeclaredField("endDate");
-            endDateField.setAccessible(true);
-            dto.endDate = (LocalDate) endDateField.get(plan);
-            
-            java.lang.reflect.Field transportInfoField = plan.getClass().getDeclaredField("transportInfo");
-            transportInfoField.setAccessible(true);
-            Object transportInfo = transportInfoField.get(plan);
-            if (transportInfo != null) {
-                dto.transportInfo = transportInfo.toString();
+            if (plan.getTransportInfo() != null) {
+                dto.transportInfo = plan.getTransportInfo().toString();
             }
             
-            java.lang.reflect.Field isPublicField = plan.getClass().getDeclaredField("isPublic");
-            isPublicField.setAccessible(true);
-            dto.isPublic = (Boolean) isPublicField.get(plan);
+            dto.isPublic = plan.getIsPublic();
+            dto.totalCost = plan.getTotalCost();
+            dto.memo = plan.getMemo();
+            dto.createdAt = plan.getCreatedAt();
+            dto.updatedAt = plan.getUpdatedAt();
             
-            java.lang.reflect.Field totalCostField = plan.getClass().getDeclaredField("totalCost");
-            totalCostField.setAccessible(true);
-            dto.totalCost = (Integer) totalCostField.get(plan);
-            
-            java.lang.reflect.Field memoField = plan.getClass().getDeclaredField("memo");
-            memoField.setAccessible(true);
-            dto.memo = (String) memoField.get(plan);
-            
-            java.lang.reflect.Field createdAtField = plan.getClass().getDeclaredField("createdAt");
-            createdAtField.setAccessible(true);
-            dto.createdAt = (LocalDateTime) createdAtField.get(plan);
-            
-            java.lang.reflect.Field updatedAtField = plan.getClass().getDeclaredField("updatedAt");
-            updatedAtField.setAccessible(true);
-            dto.updatedAt = (LocalDateTime) updatedAtField.get(plan);
-            
-            java.lang.reflect.Field groupIdField = plan.getClass().getDeclaredField("groupId");
-            groupIdField.setAccessible(true);
-            dto.groupId = (Integer) groupIdField.get(plan);
-            
+            // 그룹 ID 및 그룹 일정 여부 설정
+            dto.groupId = plan.getGroupId();
             dto.isGroup = (dto.groupId != null);
+            
+            // 장소 목록 설정
             dto.places = places;
+            
+            // 디버깅 로그
+            System.out.println("DTO 변환 완료: planId=" + dto.planId + 
+                              ", groupId=" + dto.groupId + 
+                              ", isGroup=" + dto.isGroup);
         } catch (Exception e) {
-            // 리플렉션 실패 시 기본값으로 설정
-            dto.isGroup = false;
+            System.out.println("DTO 변환 중 오류 발생: " + e.getMessage());
+            e.printStackTrace();
+            
+            // 오류 발생 시 기본값 설정
+            if (dto.isGroup == null) {
+                dto.isGroup = false;
+            }
         }
         
         return dto;
