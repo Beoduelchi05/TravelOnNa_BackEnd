@@ -16,6 +16,8 @@ import com.travelonna.demo.domain.log.repository.LikesRepository;
 import com.travelonna.demo.domain.log.repository.LogImageRepository;
 import com.travelonna.demo.domain.log.repository.LogRepository;
 import com.travelonna.demo.domain.plan.entity.Plan;
+import com.travelonna.demo.domain.plan.entity.Place;
+import com.travelonna.demo.domain.plan.repository.PlaceRepository;
 import com.travelonna.demo.domain.plan.repository.PlanRepository;
 import com.travelonna.demo.domain.user.entity.User;
 import com.travelonna.demo.domain.user.repository.UserRepository;
@@ -35,6 +37,7 @@ public class LogService {
     private final LikesRepository likesRepository;
     private final UserRepository userRepository;
     private final PlanRepository planRepository;
+    private final PlaceRepository placeRepository;
     
     private static final Logger log = LoggerFactory.getLogger(LogService.class);
     
@@ -128,6 +131,13 @@ public class LogService {
                 .collect(Collectors.toList());
         responseDto.setImageUrls(imageUrls);
         
+        // 여행 계획에 연결된 장소 정보 가져오기
+        List<Place> places = placeRepository.findByPlanIdOrderByOrder(log.getPlan().getPlanId());
+        List<String> placeNames = places.stream()
+                .map(Place::getPlace)
+                .collect(Collectors.toList());
+        responseDto.setPlaceNames(placeNames);
+        
         return responseDto;
     }
     
@@ -215,6 +225,13 @@ public class LogService {
                 .collect(Collectors.toList());
         responseDto.setImageUrls(imageUrls);
         
+        // 여행 계획에 연결된 장소 정보 가져오기
+        List<Place> places = placeRepository.findByPlanIdOrderByOrder(log.getPlan().getPlanId());
+        List<String> placeNames = places.stream()
+                .map(Place::getPlace)
+                .collect(Collectors.toList());
+        responseDto.setPlaceNames(placeNames);
+        
         return responseDto;
     }
     
@@ -287,6 +304,13 @@ public class LogService {
                         .collect(Collectors.toList());
                 dto.setImageUrls(imageUrls);
                 
+                // 여행 계획에 연결된 장소 정보 가져오기
+                List<Place> places = placeRepository.findByPlanIdOrderByOrder(log.getPlan().getPlanId());
+                List<String> placeNames = places.stream()
+                        .map(Place::getPlace)
+                        .collect(Collectors.toList());
+                dto.setPlaceNames(placeNames);
+                
                 result.add(dto);
             }
         } else {
@@ -304,6 +328,13 @@ public class LogService {
                         .map(LogImage::getImageUrl)
                         .collect(Collectors.toList());
                 dto.setImageUrls(imageUrls);
+                
+                // 여행 계획에 연결된 장소 정보 가져오기
+                List<Place> places = placeRepository.findByPlanIdOrderByOrder(log.getPlan().getPlanId());
+                List<String> placeNames = places.stream()
+                        .map(Place::getPlace)
+                        .collect(Collectors.toList());
+                dto.setPlaceNames(placeNames);
                 
                 result.add(dto);
             }
