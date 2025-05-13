@@ -58,10 +58,8 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
 
-    // AWS S3 의존성
-    implementation 'com.amazonaws:aws-java-sdk-s3:1.12.656'
-    implementation 'org.springframework.cloud:spring-cloud-aws-context:2.2.6.RELEASE'
-    implementation 'org.springframework.cloud:spring-cloud-aws-autoconfigure:2.2.6.RELEASE'
+    // AWS S3 의존성 - AWS SDK BOM으로 변경
+    implementation 'com.amazonaws:aws-java-sdk-s3'
     
     // 이미지 처리 라이브러리
     implementation 'net.coobird:thumbnailator:0.4.19'
@@ -69,7 +67,8 @@ dependencies {
 
 dependencyManagement {
     imports {
-        mavenBom "org.springframework.cloud:spring-cloud-aws-dependencies:2.2.6.RELEASE"
+        // AWS SDK BOM 추가 - 모든 AWS SDK 모듈의 버전을 통일시킴
+        mavenBom "com.amazonaws:aws-java-sdk-bom:1.12.656"
     }
 }
 

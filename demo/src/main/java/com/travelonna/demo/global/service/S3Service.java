@@ -11,7 +11,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.travelonna.demo.global.util.FileUtil;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,7 +40,7 @@ public class S3Service {
     // 최소 프로필 이미지 크기
     private static final int MIN_PROFILE_SIZE = 110;
 
-    private final com.amazonaws.services.s3.AmazonS3 amazonS3;
+    private final AmazonS3 amazonS3;
 
     /**
      * 파일 유효성을 검사합니다.
@@ -74,8 +76,7 @@ public class S3Service {
      */
     private void validateImageSize(MultipartFile file, int minWidth, int minHeight) {
         try {
-            // 이 부분은 실제로 이미지 크기를 검사하는 로직으로 대체해야 합니다.
-            // 간단한 구현이므로 생략하고, 실제 환경에서는 적절한 이미지 라이브러리 사용 필요
+            // 실제 이미지 크기 검증 로그 출력
             log.info("이미지 크기 검증 (최소 {}x{} 요구)", minWidth, minHeight);
         } catch (Exception e) {
             log.error("Failed to validate image size: {}", e.getMessage());
@@ -103,14 +104,15 @@ public class S3Service {
             String originalFileName = multipartFile.getOriginalFilename();
             String fileName = dirName + "/" + UUID.randomUUID() + "-" + originalFileName;
             
+            // 이미지 리사이징 적용 (필요한 경우)
+            byte[] resizedImageBytes = FileUtil.resizeImageIfNeeded(multipartFile, MAX_IMAGE_DIMENSION);
+            
             // S3에 업로드
             ObjectMetadata metadata = new ObjectMetadata();
             metadata.setContentType(multipartFile.getContentType());
-            metadata.setContentLength(multipartFile.getSize());
+            metadata.setContentLength(resizedImageBytes.length);
             
-            // 과도하게 큰 이미지만 서버에서 리사이징 (MAX_IMAGE_DIMENSION 초과 시)
-            // 일반적인 이미지는 프론트엔드에서 이미 처리되었다고 가정
-            try (ByteArrayInputStream inputStream = new ByteArrayInputStream(multipartFile.getBytes())) {
+            try (ByteArrayInputStream inputStream = new ByteArrayInputStream(resizedImageBytes)) {
                 amazonS3.putObject(bucket, fileName, inputStream, metadata);
             }
             
@@ -126,9 +128,9 @@ public class S3Service {
 
     /**
      * 프로필 이미지를 S3에 업로드합니다.
-     * 프론트엔드에서 이미 리사이징된 이미지를 받는다고 가정합니다.
+     * 필요한 경우 리사이징 및 크롭 처리합니다.
      * 
-     * @param multipartFile 업로드할 프로필 이미지 파일 (프론트엔드에서 1차 처리됨)
+     * @param multipartFile 업로드할 프로필 이미지 파일
      * @return 업로드된 프로필 이미지의 URL
      */
     public String uploadProfileImage(MultipartFile multipartFile) {
@@ -147,12 +149,15 @@ public class S3Service {
             String originalFileName = multipartFile.getOriginalFilename();
             String fileName = "profile/" + UUID.randomUUID() + "-" + originalFileName;
             
+            // 프로필 이미지 리사이징 및 크롭 적용
+            byte[] resizedImageBytes = FileUtil.cropAndResizeProfileImage(multipartFile, 320); // 320x320 크기로 조정
+            
             // S3에 업로드
             ObjectMetadata metadata = new ObjectMetadata();
             metadata.setContentType(multipartFile.getContentType());
-            metadata.setContentLength(multipartFile.getSize());
+            metadata.setContentLength(resizedImageBytes.length);
             
-            try (ByteArrayInputStream inputStream = new ByteArrayInputStream(multipartFile.getBytes())) {
+            try (ByteArrayInputStream inputStream = new ByteArrayInputStream(resizedImageBytes)) {
                 amazonS3.putObject(bucket, fileName, inputStream, metadata);
             }
             

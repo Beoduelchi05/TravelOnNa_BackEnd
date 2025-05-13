@@ -1,14 +1,20 @@
 package com.travelonna.demo.global.util;
 
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Objects;
 import java.util.UUID;
 
+import javax.imageio.ImageIO;
+
 import org.springframework.web.multipart.MultipartFile;
 
 import lombok.extern.slf4j.Slf4j;
+import net.coobird.thumbnailator.Thumbnails;
+import net.coobird.thumbnailator.geometry.Positions;
 
 @Slf4j
 public class FileUtil {
@@ -61,16 +67,118 @@ public class FileUtil {
     }
     
     /**
-     * 이미지가 너무 큰 경우에만 리사이징합니다.
-     * 일반적으로 프론트엔드에서 처리한다고 가정하고, 백엔드에서는 지나치게 큰 이미지만 처리합니다.
-     *
+     * 이미지가 너무 큰 경우에 리사이징합니다.
+     * 
      * @param multipartFile 리사이징할 이미지 파일
      * @param maxDimension 최대 이미지 크기
      * @return 리사이징된 바이트 배열 또는 원본 바이트 배열
      */
     public static byte[] resizeImageIfNeeded(MultipartFile multipartFile, int maxDimension) throws IOException {
-        // 실제 구현에서는 이미지 크기를 확인하고 필요 시 리사이징
-        // 여기서는 예시로 항상 원본 반환
-        return multipartFile.getBytes();
+        try {
+            BufferedImage originalImage = ImageIO.read(multipartFile.getInputStream());
+            
+            if (originalImage == null) {
+                log.warn("Cannot read image file: {}", multipartFile.getOriginalFilename());
+                return multipartFile.getBytes();
+            }
+            
+            int originalWidth = originalImage.getWidth();
+            int originalHeight = originalImage.getHeight();
+            
+            // 이미지가 최대 크기보다 크면 리사이징
+            if (originalWidth > maxDimension || originalHeight > maxDimension) {
+                log.info("Resizing image: original size {}x{}, max dimension: {}", 
+                         originalWidth, originalHeight, maxDimension);
+                
+                ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+                
+                // 이미지 비율 유지하면서 리사이징
+                if (originalWidth > originalHeight) {
+                    Thumbnails.of(originalImage)
+                        .width(maxDimension)
+                        .keepAspectRatio(true)
+                        .outputFormat(getImageFormat(multipartFile.getOriginalFilename()))
+                        .toOutputStream(outputStream);
+                } else {
+                    Thumbnails.of(originalImage)
+                        .height(maxDimension)
+                        .keepAspectRatio(true)
+                        .outputFormat(getImageFormat(multipartFile.getOriginalFilename()))
+                        .toOutputStream(outputStream);
+                }
+                
+                log.info("Image resized successfully");
+                return outputStream.toByteArray();
+            } else {
+                log.info("Image size is within acceptable limits: {}x{}, no resizing needed", 
+                         originalWidth, originalHeight);
+                return multipartFile.getBytes();
+            }
+        } catch (Exception e) {
+            log.error("Error during image resizing: {}", e.getMessage(), e);
+            // 에러 발생 시 원본 이미지 반환
+            return multipartFile.getBytes();
+        }
+    }
+    
+    /**
+     * 프로필 이미지를 정사각형으로 크롭하고 리사이징합니다.
+     * 
+     * @param multipartFile 프로필 이미지 파일
+     * @param size 정사각형 크기
+     * @return 리사이징된 바이트 배열
+     */
+    public static byte[] cropAndResizeProfileImage(MultipartFile multipartFile, int size) throws IOException {
+        try {
+            BufferedImage originalImage = ImageIO.read(multipartFile.getInputStream());
+            
+            if (originalImage == null) {
+                log.warn("Cannot read profile image file: {}", multipartFile.getOriginalFilename());
+                return multipartFile.getBytes();
+            }
+            
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            
+            // 이미지 중앙 부분을 정사각형으로 크롭하고 지정된 크기로 리사이징
+            Thumbnails.of(originalImage)
+                .size(size, size)
+                .crop(Positions.CENTER)
+                .outputFormat(getImageFormat(multipartFile.getOriginalFilename()))
+                .toOutputStream(outputStream);
+            
+            log.info("Profile image resized to {}x{} successfully", size, size);
+            return outputStream.toByteArray();
+        } catch (Exception e) {
+            log.error("Error during profile image processing: {}", e.getMessage(), e);
+            // 에러 발생 시 원본 이미지 반환
+            return multipartFile.getBytes();
+        }
+    }
+    
+    /**
+     * 파일 이름에서 이미지 포맷을 추출합니다.
+     * 
+     * @param fileName 파일 이름
+     * @return 이미지 포맷 (기본값: jpeg)
+     */
+    private static String getImageFormat(String fileName) {
+        String extension = getFileExtension(fileName).toLowerCase();
+        if (extension.isEmpty()) {
+            return "jpeg";
+        }
+        
+        // 확장자에서 점(.)을 제거
+        extension = extension.substring(1);
+        
+        // 이미지 포맷 반환
+        switch (extension) {
+            case "jpg":
+                return "jpeg";
+            case "png":
+            case "gif":
+                return extension;
+            default:
+                return "jpeg";
+        }
     }
 } 
