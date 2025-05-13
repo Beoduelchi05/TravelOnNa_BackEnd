@@ -2,6 +2,7 @@ package com.travelonna.demo.domain.log.dto;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import com.travelonna.demo.domain.log.entity.Log;
 import com.travelonna.demo.domain.plan.dto.PlanSummaryDto;
@@ -31,6 +32,7 @@ public class LogResponseDto {
     private int commentCount;
     private Boolean isLiked;
     private PlanSummaryDto plan;
+    private List<String> placeNames;
     
     public static LogResponseDto fromEntity(Log log, boolean isLiked) {
         return LogResponseDto.builder()
