@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @NoArgsConstructor
@@ -28,6 +29,9 @@ public class GroupResponseDto {
     
     @Schema(description = "그룹 주최자 ID", example = "1")
     private Integer hostId;
+    
+    @Schema(description = "그룹에 연결된 플랜 ID 목록", example = "[1, 2, 3]")
+    private List<Integer> planIds;
 
     public static GroupResponseDto fromEntity(GroupEntity entity) {
         return GroupResponseDto.builder()
@@ -37,5 +41,9 @@ public class GroupResponseDto {
                 .createdDate(entity.getCreatedDate())
                 .hostId(entity.getHost().getUserId())
                 .build();
+    }
+    
+    public void setPlanIds(List<Integer> planIds) {
+        this.planIds = planIds;
     }
 } 

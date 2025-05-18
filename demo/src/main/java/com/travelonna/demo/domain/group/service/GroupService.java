@@ -142,4 +142,22 @@ public class GroupService {
                 .map(GroupResponseDto::fromEntity)
                 .collect(Collectors.toList());
     }
+
+    @Transactional(readOnly = true)
+    public List<Integer> getPlansForGroup(Integer groupId) {
+        GroupEntity group = groupRepository.findById(groupId.longValue())
+                .orElseThrow(() -> new IllegalArgumentException("Group not found with ID: " + groupId));
+        
+        List<Plan> plans = planRepository.findByGroupId(groupId);
+        
+        return plans.stream()
+                .map(Plan::getPlanId)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public GroupEntity findGroupById(Integer groupId) {
+        return groupRepository.findById(groupId.longValue())
+                .orElseThrow(() -> new IllegalArgumentException("Group not found with ID: " + groupId));
+    }
 } 

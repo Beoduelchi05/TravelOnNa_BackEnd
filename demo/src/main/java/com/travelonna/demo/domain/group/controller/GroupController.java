@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.travelonna.demo.domain.group.dto.GroupRequestDto;
 import com.travelonna.demo.domain.group.dto.GroupResponseDto;
+import com.travelonna.demo.domain.group.entity.GroupEntity;
 import com.travelonna.demo.domain.group.service.GroupService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -91,5 +92,24 @@ public class GroupController {
             @Parameter(description = "인증된 사용자 ID", example = "1") @RequestAttribute("userId") Integer userId) {
         List<GroupResponseDto> groups = groupService.getMyGroups(userId);
         return ResponseEntity.ok(groups);
+    }
+
+    @Operation(summary = "그룹의 플랜 ID 목록 조회", description = "그룹 ID를 사용하여 해당 그룹에 속한 플랜 ID 목록을 조회합니다.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "플랜 ID 목록 조회 성공"),
+        @ApiResponse(responseCode = "404", description = "그룹을 찾을 수 없음")
+    })
+    @GetMapping("/{groupId}")
+    public ResponseEntity<GroupResponseDto> getGroupDetails(
+            @Parameter(description = "조회할 그룹의 ID", example = "1") @PathVariable Integer groupId) {
+        // 그룹 정보 조회
+        GroupEntity group = groupService.findGroupById(groupId);
+        GroupResponseDto responseDto = GroupResponseDto.fromEntity(group);
+        
+        // 그룹에 속한 플랜 ID 목록 조회 및 설정
+        List<Integer> planIds = groupService.getPlansForGroup(groupId);
+        responseDto.setPlanIds(planIds);
+        
+        return ResponseEntity.ok(responseDto);
     }
 } 
