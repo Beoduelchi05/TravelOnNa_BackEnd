@@ -11,6 +11,9 @@ import com.travelonna.demo.global.service.S3Service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -23,6 +26,11 @@ public class ProfileService {
         // 닉네임 중복 검사
         if (profileRepository.existsByNickname(nickname)) {
             throw new IllegalArgumentException("이미 사용 중인 닉네임입니다: " + nickname);
+        }
+        
+        // 사용자 ID 중복 검사
+        if (profileRepository.findByUserId(userId).isPresent()) {
+            throw new IllegalArgumentException("해당 사용자는 이미 프로필을 가지고 있습니다. " + "userID: " + userId);
         }
         
         Profile profile = Profile.builder()
@@ -42,6 +50,11 @@ public class ProfileService {
         // 닉네임 중복 검사
         if (profileRepository.existsByNickname(nickname)) {
             throw new IllegalArgumentException("이미 사용 중인 닉네임입니다: " + nickname);
+        }
+        
+        // 사용자 ID 중복 검사
+        if (profileRepository.findByUserId(userId).isPresent()) {
+            throw new IllegalArgumentException("해당 사용자는 이미 프로필을 가지고 있습니다: " + userId);
         }
         
         // 프로필 이미지 업로드
@@ -71,6 +84,35 @@ public class ProfileService {
     public Profile getProfileByUserId(Integer userId) {
         return profileRepository.findByUserId(userId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 사용자의 프로필을 찾을 수 없습니다: " + userId));
+    }
+    
+    /**
+     * 사용자 ID에 해당하는 프로필을 Optional로 반환합니다. 
+     * 존재하지 않는 경우 빈 Optional을 반환합니다.
+     * 여러 결과가 있는 경우 첫 번째 결과만 반환합니다.
+     */
+    @Transactional(readOnly = true)
+    public java.util.Optional<Profile> findProfileByUserId(Integer userId) {
+        try {
+            // 직접 native query 또는 JPQL로 첫 번째 결과만 가져오는 방식으로 변경
+            List<Profile> profiles = profileRepository.findAll().stream()
+                    .filter(p -> {
+                        Integer pUserId = p.getUserId();
+                        return pUserId != null && pUserId.equals(userId);
+                    })
+                    .limit(1)
+                    .collect(Collectors.toList());
+                    
+            if (profiles.isEmpty()) {
+                return java.util.Optional.empty();
+            } else {
+                return java.util.Optional.of(profiles.get(0));
+            }
+        } catch (Exception e) {
+            // 예외 처리
+            log.error("프로필 조회 중 오류 발생: {}", e.getMessage());
+            return java.util.Optional.empty();
+        }
     }
     
     public Profile updateProfile(Integer profileId, String nickname, String profileImage, String introduction) {
@@ -134,5 +176,41 @@ public class ProfileService {
         }
         
         return profileRepository.save(profile);
+    }
+    
+    /**
+     * 사용자 ID에 대한 중복 프로필 정리
+     * 여러 프로필이 존재할 경우 가장 최근에 생성된 프로필만 남기고 나머지는 삭제합니다.
+     * 
+     * @param userId 정리할 사용자 ID
+     * @return 삭제된 프로필 수
+     */
+    @Transactional
+    public int cleanupDuplicateProfiles(Integer userId) {
+        try {
+            // 해당 사용자의 모든 프로필을 가져오기
+            List<Profile> profiles = profileRepository.findAll().stream()
+                    .filter(p -> userId.equals(p.getUserId()))
+                    .sorted((p1, p2) -> p2.getCreatedAt().compareTo(p1.getCreatedAt())) // 최신순 정렬
+                    .collect(Collectors.toList());
+            
+            if (profiles.size() <= 1) {
+                // 프로필이 없거나 하나만 있으면 정리할 필요 없음
+                return 0;
+            }
+            
+            // 가장 최근 프로필 외의 모든 프로필 삭제
+            int deletedCount = 0;
+            for (int i = 1; i < profiles.size(); i++) {
+                profileRepository.delete(profiles.get(i));
+                deletedCount++;
+            }
+            
+            log.info("사용자 ID {}의 중복 프로필 {} 개를 정리했습니다", userId, deletedCount);
+            return deletedCount;
+        } catch (Exception e) {
+            log.error("프로필 정리 중 오류 발생: {}", e.getMessage());
+            throw e;
+        }
     }
 }

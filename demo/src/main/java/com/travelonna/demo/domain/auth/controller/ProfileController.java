@@ -26,8 +26,11 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
+import java.util.HashMap;
 
 /**
  * 사용자 프로필 관리를 위한 REST API 컨트롤러
@@ -41,6 +44,7 @@ import java.util.Map;
 public class ProfileController {
 
     private final ProfileService profileService;
+    private static final Logger logger = LoggerFactory.getLogger(ProfileController.class);
     
     /**
      * 새로운 사용자 프로필을 생성합니다.
@@ -71,7 +75,7 @@ public class ProfileController {
             @Parameter(description = "프로필 이미지 파일 (권장: 320x320px, 최소: 110x110px, 최대 5MB)", required = false)
             @RequestPart(required = false) MultipartFile profileImage) {
         try {
-            log.info("Creating profile with data: {}", profileData);
+            logger.info("Creating profile with data: {}", profileData);
             
             Integer userId = Integer.valueOf(profileData.get("userId").toString());
             String nickname = profileData.get("nickname").toString();
@@ -91,10 +95,10 @@ public class ProfileController {
             
             return ResponseEntity.ok(convertToResponse(profile));
         } catch (IllegalArgumentException e) {
-            log.error("Failed to create profile: {}", e.getMessage());
+            logger.error("Failed to create profile: {}", e.getMessage());
             return ResponseEntity.badRequest().body(new ProfileResponse(null, e.getMessage()));
         } catch (Exception e) {
-            log.error("Unexpected error while creating profile: {}", e.getMessage());
+            logger.error("Unexpected error while creating profile: {}", e.getMessage());
             return ResponseEntity.status(500).body(new ProfileResponse(null, "프로필 생성 중 오류가 발생했습니다: " + e.getMessage()));
         }
     }
@@ -104,23 +108,44 @@ public class ProfileController {
      * 
      * @param userId 조회할 사용자의 ID
      * @return 조회된 프로필 정보와 상태 코드
-     * @throws IllegalArgumentException 해당 사용자 ID의 프로필이 존재하지 않는 경우
      */
     @Operation(summary = "사용자 ID로 프로필 조회", description = "사용자 ID에 해당하는 프로필 정보를 조회합니다.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "프로필 조회 성공", 
                      content = @Content(schema = @Schema(implementation = ProfileResponse.class))),
-        @ApiResponse(responseCode = "400", description = "프로필이 존재하지 않음", 
-                     content = @Content(schema = @Schema(implementation = ProfileResponse.class)))
+        @ApiResponse(responseCode = "204", description = "프로필이 존재하지 않음")
     })
     @GetMapping("/user/{userId}")
     public ResponseEntity<ProfileResponse> getProfileByUserId(
             @Parameter(name = "userId", description = "조회할 사용자 ID (회원 테이블의 ID)", required = true, example = "6", in = ParameterIn.PATH) 
             @PathVariable("userId") Integer userId) {
         try {
-            Profile profile = profileService.getProfileByUserId(userId);
-            return ResponseEntity.ok(convertToResponse(profile));
-        } catch (IllegalArgumentException e) {
+            logger.info("사용자 ID로 프로필 조회 요청: {}", userId);
+            
+            // 프로필 조회 전에 해당 사용자의 중복 프로필을 자동으로 정리
+            try {
+                int duplicateCount = profileService.cleanupDuplicateProfiles(userId);
+                if (duplicateCount > 0) {
+                    logger.info("사용자 ID {}의 중복 프로필 {}개를 자동 정리했습니다", userId, duplicateCount);
+                }
+            } catch (Exception e) {
+                logger.warn("프로필 자동 정리 중 오류 발생 (무시됨): {}", e.getMessage());
+            }
+            
+            java.util.Optional<Profile> profileOpt = profileService.findProfileByUserId(userId);
+            
+            if (profileOpt.isPresent()) {
+                return ResponseEntity.ok(convertToResponse(profileOpt.get()));
+            } else {
+                logger.info("사용자 ID에 해당하는 프로필이 없습니다: {}", userId);
+                return ResponseEntity.noContent().build();
+            }
+        } catch (org.springframework.dao.IncorrectResultSizeDataAccessException e) {
+            // 여러 결과가 반환된 경우의 예외 처리
+            logger.error("프로필 조회 중 데이터 불일치 발생: 사용자 ID {}에 대해 여러 프로필이 존재합니다", userId);
+            return ResponseEntity.badRequest().body(new ProfileResponse(null, "해당 사용자에 대해 여러 프로필이 존재합니다. 관리자에게 문의하세요."));
+        } catch (Exception e) {
+            logger.error("프로필 조회 중 오류 발생: {}", e.getMessage());
             return ResponseEntity.badRequest().body(new ProfileResponse(null, e.getMessage()));
         }
     }
@@ -184,7 +209,7 @@ public class ProfileController {
             @Parameter(description = "수정할 프로필 이미지 파일 (권장: 320x320px, 최소: 110x110px, 최대 5MB)", required = false)
             @RequestPart(required = false) MultipartFile profileImage) {
         try {
-            log.info("Updating profile for profileId: {}", profileId);
+            logger.info("Updating profile for profileId: {}", profileId);
             
             String nickname = profileData.get("nickname") != null ? profileData.get("nickname").toString() : null;
             String profileImageUrl = profileData.get("profileImageUrl") != null ? 
@@ -203,11 +228,50 @@ public class ProfileController {
             
             return ResponseEntity.ok(convertToResponse(profile));
         } catch (IllegalArgumentException e) {
-            log.error("Failed to update profile: {}", e.getMessage());
+            logger.error("Failed to update profile: {}", e.getMessage());
             return ResponseEntity.badRequest().body(new ProfileResponse(null, e.getMessage()));
         } catch (Exception e) {
-            log.error("Unexpected error while updating profile: {}", e.getMessage());
+            logger.error("Unexpected error while updating profile: {}", e.getMessage());
             return ResponseEntity.status(500).body(new ProfileResponse(null, "프로필 수정 중 오류가 발생했습니다: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * 관리자용: 사용자 ID에 대한 중복 프로필을 정리합니다.
+     * 여러 프로필이 존재할 경우 가장 최근에 생성된 프로필만 남기고 나머지는 삭제합니다.
+     * 
+     * @param userId 정리할 사용자의 ID
+     * @return 정리 결과 메시지와 상태 코드
+     */
+    @Operation(summary = "중복 프로필 정리 (관리자용)", description = "사용자 ID에 대한 중복 프로필을 정리합니다.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "프로필 정리 성공", 
+                     content = @Content(schema = @Schema(implementation = Map.class))),
+        @ApiResponse(responseCode = "500", description = "서버 오류", 
+                     content = @Content(schema = @Schema(implementation = Map.class)))
+    })
+    @GetMapping("/admin/cleanup/{userId}")
+    public ResponseEntity<Map<String, Object>> cleanupDuplicateProfiles(
+            @Parameter(name = "userId", description = "정리할 사용자 ID", required = true, example = "14", in = ParameterIn.PATH) 
+            @PathVariable("userId") Integer userId) {
+        try {
+            logger.info("사용자 ID {}의 중복 프로필 정리 요청", userId);
+            int deletedCount = profileService.cleanupDuplicateProfiles(userId);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", String.format("사용자 ID %d의 중복 프로필 %d개를 정리했습니다", userId, deletedCount));
+            response.put("deletedCount", deletedCount);
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("프로필 정리 중 오류 발생: {}", e.getMessage());
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "프로필 정리 중 오류가 발생했습니다: " + e.getMessage());
+            
+            return ResponseEntity.status(500).body(response);
         }
     }
     
