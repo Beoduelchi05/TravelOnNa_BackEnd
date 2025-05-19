@@ -4,6 +4,8 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,6 +21,7 @@ import com.travelonna.demo.domain.log.service.LogService;
 import com.travelonna.demo.domain.user.entity.User;
 import com.travelonna.demo.domain.user.repository.UserRepository;
 import com.travelonna.demo.global.common.ApiResponse;
+import com.travelonna.demo.global.security.jwt.JwtUserDetails;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -177,25 +180,15 @@ public class LogController {
                 isLiked));
     }
     
-    // TODO: 인증 구현 시 대체
     private Integer getCurrentUserId() {
-        try {
-            // 실제 환경에서는 SecurityContext에서 사용자 정보를 가져와야 함
-            // 임시 구현: 데이터베이스에서 첫 번째 사용자 검색
-            log.debug("사용자 ID 조회 시도 - 테스트 모드");
-            
-            List<User> users = userRepository.findAll();
-            if (!users.isEmpty()) {
-                User user = users.get(0);
-                log.debug("DB에서 첫 번째 사용자 조회 성공: userId={}", user.getUserId());
-                return user.getUserId();
-            } else {
-                log.warn("DB에 사용자가 없음, 기본 테스트 ID 12 사용");
-                return 12; // 테스트용 ID (실제 DB에 존재해야 함)
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.isAuthenticated()) {
+            Object principal = authentication.getPrincipal();
+            if (principal instanceof JwtUserDetails) {
+                return ((JwtUserDetails) principal).getUserId();
             }
-        } catch (Exception e) {
-            log.error("사용자 ID 조회 중 오류 발생: {}", e.getMessage(), e);
-            return 12; // 오류 발생 시 기본값
         }
+        // 인증 정보가 없는 경우에 대한 처리
+        throw new IllegalStateException("인증된 사용자를 찾을 수 없습니다");
     }
 } 
