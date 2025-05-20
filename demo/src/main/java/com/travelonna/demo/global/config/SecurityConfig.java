@@ -44,6 +44,8 @@ public class SecurityConfig {
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html", "/api-docs/**").permitAll()
                 .requestMatchers("/error").permitAll()
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                // Actuator 헬스 체크 엔드포인트 인증 없이 허용
+                .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                 // 프로필 조회 API는 인증 없이 허용
                 .requestMatchers("/api/v1/profiles/user/**").permitAll()
                 // 프로필 생성 및 수정 API는 인증 필요
