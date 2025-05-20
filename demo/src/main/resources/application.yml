@@ -4,7 +4,9 @@ server:
 spring:
   profiles:
     active: dev
-    include: secret
+    include: 
+      - secret
+      - docker
     
   datasource:
     url: jdbc:mysql://travelonna.chm0a4kmgsm5.ap-northeast-2.rds.amazonaws.com:3306/travelonna?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
