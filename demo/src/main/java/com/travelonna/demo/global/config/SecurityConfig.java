@@ -45,7 +45,7 @@ public class SecurityConfig {
                 .requestMatchers("/error").permitAll()
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 // Actuator 헬스 체크 엔드포인트 인증 없이 허용
-                .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+                .requestMatchers("/actuator/**").permitAll()
                 // 프로필 조회 API는 인증 없이 허용
                 .requestMatchers("/api/v1/profiles/user/**").permitAll()
                 // 프로필 생성 및 수정 API는 인증 필요
