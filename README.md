@@ -4,107 +4,43 @@
 
 ## 기술 스택
 
-- 백엔드: Spring Boot 3.2.3, Java 17
-- 데이터베이스: MySQL (AWS RDS)
-- 인증: OAuth2.0, JWT
-- API 문서: Swagger UI (SpringDoc OpenAPI)
+- **백엔드**: Spring Boot 3.2.3, Java 17
+- **데이터베이스**: MySQL (AWS RDS)
+- **인증**: OAuth2.0, JWT
+- **API 문서**: Swagger UI (SpringDoc OpenAPI)
+- **배포**: AWS EC2, Docker
 
 ## 주요 기능
 
 - Google OAuth2.0을 이용한 소셜 로그인
 - JWT 기반 인증 시스템
-- 사용자 관리
-- 여행 계획 생성 및 공유
-- 소셜 네트워킹 기능
+- 사용자 프로필 관리
+- 여행 계획 생성, 공유, 수정
+- 소셜 네트워킹 (팔로우, 좋아요, 댓글)
+- 여행 장소 검색 및 추천
 
-## 개발 환경 설정
+## 로컬 개발 환경 설정
 
 ### 필수 요구사항
-
 - Java 17 이상
 - Gradle
 - MySQL
 
-### 로컬 개발 환경 설정
-
-1. 프로젝트 클론
+### 실행 방법
 ```bash
-git clone https://github.com/your-username/travelonna.git
-cd travelonna
-```
-
-2. 애플리케이션 실행
-```bash
+git clone https://github.com/KIMMIN5/TravelOnNa_BackEnd.git
+cd TravelOnNa_BackEnd/demo
 ./gradlew bootRun
 ```
 
-3. 애플리케이션 빌드
-```bash
-./gradlew build
-```
+## API 문서
 
-## API 문서 (Swagger UI)
-
-애플리케이션이 실행된 후 다음 URL에서 API 문서를 확인할 수 있습니다:
+애플리케이션 실행 후 Swagger UI로 API 문서를 확인할 수 있습니다:
 - http://localhost:8080/swagger-ui.html
 
-Swagger UI를 통해 다음과 같은 작업을 수행할 수 있습니다:
-- 모든 API 엔드포인트 확인
-- API 요청 및 응답 형식 확인
-- API 직접 테스트 (Try it out 기능)
-- JWT 토큰을 사용한 인증 테스트
+## 환경 설정
 
-### 인증 API
-
-#### Google 로그인
-- URL: `/api/auth/google`
-- Method: `POST`
-- Request Body:
-  ```json
-  {
-    "code": "google-authorization-code"
-  }
-  ```
-- Response:
-  ```json
-  {
-    "accessToken": "jwt-access-token",
-    "refreshToken": "jwt-refresh-token",
-    "tokenType": "Bearer",
-    "expiresIn": 3600
-  }
-  ```
-
-#### 토큰 갱신
-- URL: `/api/auth/refresh`
-- Method: `POST`
-- Request Body:
-  ```json
-  {
-    "refreshToken": "jwt-refresh-token"
-  }
-  ```
-- Response:
-  ```json
-  {
-    "accessToken": "new-jwt-access-token",
-    "refreshToken": "existing-jwt-refresh-token",
-    "tokenType": "Bearer",
-    "expiresIn": 3600
-  }
-  ```
-
-## 안드로이드 OAuth2.0 설정
-
-안드로이드 OAuth2.0 클라이언트는 일반 웹 클라이언트와 달리 client_secret이 없습니다. 대신 다음과 같은 설정이 필요합니다:
-
-1. Google Cloud Console에서 OAuth2.0 클라이언트 ID 생성 (Android 타입)
-2. 리다이렉트 URI 설정: `com.travelonna.app:/oauth2redirect`
-3. 안드로이드 앱에서 인증 코드를 받아 백엔드로 전송
-
-## 보안 설정
-
-애플리케이션의 보안 설정은 `application-secret.yml` 파일에 저장됩니다. 이 파일은 Git에 커밋되지 않으며, 다음과 같은 형식으로 작성해야 합니다:
+`application-secret.yml` 파일에 다음과 같은 설정이 필요합니다:
 
 ```yaml
 db:
@@ -115,5 +51,20 @@ google:
   redirect-uri: "com.travelonna.app:/oauth2redirect"
 
 jwt:
-  secret-key: your-jwt-secret-key-should-be-at-least-64-bytes-long
-``` 
+  secret-key: your-jwt-secret-key
+```
+
+## 프로젝트 구조
+
+```
+src/main/java/com/travelonna/demo/
+├── global/         # 공통 설정 및 유틸리티
+├── domain/         # 도메인별 기능 구현
+│   ├── auth/       # 인증 관련 기능
+│   ├── user/       # 사용자 관련 기능
+│   ├── plan/       # 여행 계획 관련 기능
+│   ├── log/        # 여행 기록 관련 기능
+│   ├── follow/     # 팔로우 관련 기능
+│   └── group/      # 그룹 관련 기능
+└── TravelonnaApplication.java  # 애플리케이션 진입점
+```
