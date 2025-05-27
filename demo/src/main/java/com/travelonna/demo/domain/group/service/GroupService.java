@@ -138,9 +138,18 @@ public class GroupService {
                 .filter(group -> groupMemberRepository.existsByGroupAndUser(group, user))
                 .collect(Collectors.toList());
         
-        return groups.stream()
+        List<GroupResponseDto> responseDtos = groups.stream()
                 .map(GroupResponseDto::fromEntity)
                 .collect(Collectors.toList());
+        
+        // 각 그룹에 대한 planIds 설정
+        for (GroupResponseDto dto : responseDtos) {
+            List<Integer> planIds = getPlansForGroup(dto.getId());
+            dto.setPlanIds(planIds);
+            log.debug("Setting planIds for group {}: {}", dto.getId(), planIds);
+        }
+        
+        return responseDtos;
     }
 
     @Transactional(readOnly = true)
@@ -148,11 +157,16 @@ public class GroupService {
         GroupEntity group = groupRepository.findById(groupId.longValue())
                 .orElseThrow(() -> new IllegalArgumentException("Group not found with ID: " + groupId));
         
+        log.debug("Finding plans for group ID: {}", groupId);
         List<Plan> plans = planRepository.findByGroupId(groupId);
+        log.debug("Found {} plans for group ID: {}", plans.size(), groupId);
         
-        return plans.stream()
+        List<Integer> planIds = plans.stream()
                 .map(Plan::getPlanId)
                 .collect(Collectors.toList());
+        
+        log.debug("Plan IDs for group {}: {}", groupId, planIds);
+        return planIds;
     }
 
     @Transactional(readOnly = true)
