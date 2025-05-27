@@ -76,6 +76,95 @@ public class LogService {
             throw new IllegalArgumentException("Comment is required");
         }
         
+        // placeId가 제공된 경우, 해당 장소만 처리
+        if (requestDto.getPlaceId() != null) {
+            Place place = placeRepository.findByPlaceIdAndPlan_PlanId(requestDto.getPlaceId(), plan.getPlanId())
+                    .orElseThrow(() -> {
+                        log.error("장소를 찾을 수 없음: placeId={}, planId={}", requestDto.getPlaceId(), plan.getPlanId());
+                        return new ResourceNotFoundException("Place not found: ID=" + requestDto.getPlaceId());
+                    });
+            
+            // 해당 장소에 대한 Log 생성
+            Log logEntity = Log.builder()
+                    .user(user)
+                    .plan(plan)
+                    .comment(requestDto.getComment() + " - " + place.getName()) // 장소 이름을 댓글에 추가
+                    .isPublic(requestDto.getIsPublic() != null ? requestDto.getIsPublic() : false)
+                    .build();
+            
+            // images 컬렉션이 null인 경우 초기화
+            if (logEntity.getImages() == null) {
+                logEntity.setImages(new ArrayList<>());
+            }
+            
+            Log savedLog = logRepository.save(logEntity);
+            log.debug("여행 기록 저장 성공 (장소 {}): logId={}", place.getPlaceId(), savedLog.getLogId());
+            
+            // 이미지가 제공된 경우에만 처리 (선택 사항)
+            if (requestDto.getImageUrls() != null && !requestDto.getImageUrls().isEmpty()) {
+                int maxImages = Math.min(requestDto.getImageUrls().size(), 10);
+                for (int i = 0; i < maxImages; i++) {
+                    LogImage image = LogImage.builder()
+                            .log(savedLog)
+                            .imageUrl(requestDto.getImageUrls().get(i))
+                            .orderNum(i + 1)
+                            .build();
+                    savedLog.addImage(image);
+                }
+            }
+            
+            return LogResponseDto.fromEntity(savedLog, false);
+        }
+        
+        // placeId가 없는 경우, 해당 planId의 모든 place 조회
+        List<Place> places = placeRepository.findByPlanIdOrderByOrder(plan.getPlanId());
+        
+        if (places.isEmpty()) {
+            // 일정에 등록된 장소가 없는 경우 일반적인 방식으로 한 개의 Log 생성
+            return createSingleLog(user, plan, requestDto);
+        }
+        
+        // 각 place마다 Log 생성
+        List<Log> createdLogs = new ArrayList<>();
+        for (Place place : places) {
+            Log logEntity = Log.builder()
+                    .user(user)
+                    .plan(plan)
+                    .comment(requestDto.getComment() + " - " + place.getName()) // 장소 이름을 댓글에 추가
+                    .isPublic(requestDto.getIsPublic() != null ? requestDto.getIsPublic() : false)
+                    .build();
+            
+            // images 컬렉션이 null인 경우 초기화
+            if (logEntity.getImages() == null) {
+                logEntity.setImages(new ArrayList<>());
+            }
+            
+            Log savedLog = logRepository.save(logEntity);
+            log.debug("여행 기록 저장 성공 (장소 {}): logId={}", place.getPlaceId(), savedLog.getLogId());
+            
+            // 이미지가 제공된 경우에만 처리 (선택 사항)
+            if (requestDto.getImageUrls() != null && !requestDto.getImageUrls().isEmpty()) {
+                int maxImages = Math.min(requestDto.getImageUrls().size(), 10);
+                for (int i = 0; i < maxImages; i++) {
+                    LogImage image = LogImage.builder()
+                            .log(savedLog)
+                            .imageUrl(requestDto.getImageUrls().get(i))
+                            .orderNum(i + 1)
+                            .build();
+                    savedLog.addImage(image);
+                }
+            }
+            
+            createdLogs.add(savedLog);
+        }
+        
+        // 마지막에 생성된 Log를 반환 (또는 필요에 따라 첫 번째 Log를 반환)
+        Log lastLog = createdLogs.get(createdLogs.size() - 1);
+        return LogResponseDto.fromEntity(lastLog, false);
+    }
+    
+    // 단일 Log 생성 메소드 (장소가 없는 경우 사용)
+    private LogResponseDto createSingleLog(User user, Plan plan, LogRequestDto requestDto) {
         Log logEntity = Log.builder()
                 .user(user)
                 .plan(plan)

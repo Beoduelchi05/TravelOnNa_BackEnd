@@ -43,7 +43,7 @@ public class LogController {
     private final LogService logService;
     private final UserRepository userRepository;
     
-    @Operation(summary = "여행 기록 생성", description = "여행 일정 정보를 바탕으로 새로운 여행 기록을 생성합니다. 글(comment)은 필수이며, 이미지는 선택적으로 최대 10개까지 첨부 가능합니다.")
+    @Operation(summary = "여행 기록 생성", description = "여행 일정 정보를 바탕으로 새로운 여행 기록을 생성합니다. 글(comment)은 필수이며, 이미지는 선택적으로 최대 10개까지 첨부 가능합니다. placeId를 지정하면 해당 장소에 대한 기록만 생성하고, 지정하지 않으면 planId에 포함된 모든 장소에 대한 기록이 생성됩니다.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "기록 생성 성공", 
                  content = @Content(schema = @Schema(implementation = LogResponseDto.class))),
@@ -53,7 +53,7 @@ public class LogController {
     })
     @PostMapping
     public ResponseEntity<ApiResponse<LogResponseDto>> createLog(
-            @Parameter(description = "여행 기록 생성 정보", example = "{\n  \"planId\": 1,\n  \"comment\": \"정말 멋진 여행이었습니다!\",\n  \"isPublic\": true,\n  \"imageUrls\": [\"https://example.com/image1.jpg\", \"https://example.com/image2.jpg\"]\n}")
+            @Parameter(description = "여행 기록 생성 정보", example = "{\n  \"planId\": 1,\n  \"placeId\": null,\n  \"comment\": \"정말 멋진 여행이었습니다!\",\n  \"isPublic\": true,\n  \"imageUrls\": [\"https://example.com/image1.jpg\", \"https://example.com/image2.jpg\"]\n}")
             @Valid @RequestBody LogRequestDto requestDto) {
         // 현재 로그인한 사용자 ID (인증 구현 필요)
         Integer userId = getCurrentUserId();

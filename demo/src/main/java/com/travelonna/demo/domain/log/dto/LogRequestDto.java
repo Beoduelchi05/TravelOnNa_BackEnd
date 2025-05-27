@@ -21,6 +21,9 @@ public class LogRequestDto {
     @NotNull(message = "일정 ID는 필수입니다")
     private Integer planId;
     
+    // 특정 장소에 대한 기록을 생성할 때 사용 (선택 사항)
+    private Integer placeId;
+    
     @NotBlank(message = "기록 내용은 필수입니다")
     private String comment;
     
