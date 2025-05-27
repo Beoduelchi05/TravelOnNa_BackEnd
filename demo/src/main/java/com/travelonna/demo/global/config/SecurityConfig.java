@@ -48,6 +48,8 @@ public class SecurityConfig {
                 .requestMatchers("/actuator/**").permitAll()
                 // 프로필 조회 API는 인증 없이 허용
                 .requestMatchers("/api/v1/profiles/user/**").permitAll()
+                // 검색 API 인증 없이 허용
+                .requestMatchers("/api/v1/search/**").permitAll()
                 // 프로필 생성 및 수정 API는 인증 필요
                 .requestMatchers(HttpMethod.POST, "/api/v1/profiles").authenticated()
                 .requestMatchers(HttpMethod.PUT, "/api/v1/profiles/**").authenticated()
