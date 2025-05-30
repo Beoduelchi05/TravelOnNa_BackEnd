@@ -41,7 +41,7 @@ public class LogCommentController {
     private final UserRepository userRepository;
     
     // 댓글 생성
-    @Operation(summary = "댓글 생성", description = "여행 기록에 댓글을 작성합니다. 대댓글인 경우 parentId를 지정하세요.")
+    @Operation(summary = "댓글 생성", description = "여행 기록에 댓글을 작성합니다. 대댓글인 경우 parentId를 지정하세요.\n\n**자동 기록**: 공개 기록에 댓글 생성 시에만 사용자 행동 데이터(COMMENT 액션)가 자동으로 user_actions 테이블에 기록되어 추천 시스템에 활용됩니다.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "댓글 생성 성공", 
                  content = @Content(schema = @Schema(implementation = LogCommentResponseDto.class))),

@@ -2,7 +2,11 @@ package com.travelonna.demo.domain.plan.service;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.stream.Collectors;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -176,23 +180,66 @@ public class PlanService {
     public List<PlanResponseDto> getUserPlans(Integer userId) {
         log.info("사용자 일정 목록 조회: 사용자 ID {}", userId);
         
-        List<Plan> plans = planRepository.findByUserId(userId);
+        // 1. 사용자가 직접 생성한 일정들
+        List<Plan> myPlans = planRepository.findByUserId(userId);
+        log.debug("사용자가 직접 생성한 일정: {}개", myPlans.size());
         
-        // 계획 엔티티를 DTO로 변환
-        List<PlanResponseDto> result = plans.stream()
+        // 2. 사용자가 그룹 멤버로 참여한 그룹의 일정들
+        List<Plan> groupPlans = planRepository.findPlansWhereUserIsGroupMember(userId);
+        log.debug("그룹 멤버로 참여한 일정: {}개", groupPlans.size());
+        
+        // 3. 두 리스트를 합치고 중복 제거 (같은 planId를 가진 경우)
+        Set<Integer> seenPlanIds = new HashSet<>();
+        List<Plan> allPlans = new ArrayList<>();
+        
+        // 먼저 내가 만든 일정들 추가
+        for (Plan plan : myPlans) {
+            if (seenPlanIds.add(plan.getPlanId())) {
+                allPlans.add(plan);
+            }
+        }
+        
+        // 그룹에서 참여한 일정들 추가 (중복 제거)
+        for (Plan plan : groupPlans) {
+            if (seenPlanIds.add(plan.getPlanId())) {
+                allPlans.add(plan);
+            }
+        }
+        
+        // 4. 계획 엔티티를 DTO로 변환
+        List<PlanResponseDto> result = allPlans.stream()
                 .map(PlanResponseDto::fromEntity)
                 .collect(Collectors.toList());
         
-        log.info("사용자 일정 목록 조회 완료: 총 {}개의 일정", result.size());
+        log.info("사용자 일정 목록 조회 완료: 총 {}개의 일정 (직접 생성: {}개, 그룹 참여: {}개)", 
+                 result.size(), myPlans.size(), groupPlans.size());
         return result;
     }
     
     /**
      * 권한 검증이 포함된 일정 조회
      */
-    private Plan getPlanWithPermissionCheck(Integer userId, Integer planId) {
-        return planRepository.findByPlanIdAndUserId(planId, userId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 일정을 찾을 수 없거나 권한이 없습니다: " + planId));
+    public Plan getPlanWithPermissionCheck(Integer userId, Integer planId) {
+        // 먼저 사용자가 직접 만든 일정인지 확인
+        Optional<Plan> myPlan = planRepository.findByPlanIdAndUserId(planId, userId);
+        if (myPlan.isPresent()) {
+            return myPlan.get();
+        }
+        
+        // 그룹 멤버로 참여한 일정인지 확인
+        Optional<Plan> plan = planRepository.findById(planId);
+        if (plan.isPresent() && plan.get().getGroupId() != null) {
+            // 그룹 ID가 있는 일정인 경우, 해당 그룹의 멤버인지 확인
+            List<Plan> groupPlans = planRepository.findPlansWhereUserIsGroupMember(userId);
+            boolean hasAccess = groupPlans.stream()
+                    .anyMatch(p -> p.getPlanId().equals(planId));
+            
+            if (hasAccess) {
+                return plan.get();
+            }
+        }
+        
+        throw new IllegalArgumentException("해당 일정을 찾을 수 없거나 권한이 없습니다: " + planId);
     }
     
     // 기간 유효성 검사 공통 메소드

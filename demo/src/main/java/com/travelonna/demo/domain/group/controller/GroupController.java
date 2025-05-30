@@ -74,7 +74,7 @@ public class GroupController {
         log.info("Joining group with URL: {}, user ID: {}", url, userId);
         try {
             groupService.joinGroup(userId, url);
-            log.info("Successfully joined group with URL: {}", url);
+            log.info("Successfully processed group join request for URL: {}, user ID: {}", url, userId);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
             log.error("Error joining group: {}", e.getMessage(), e);

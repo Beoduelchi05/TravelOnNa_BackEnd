@@ -40,9 +40,8 @@ public class PlaceService {
     public PlaceResponseDto createPlace(Integer userId, Integer planId, CreatePlaceDto requestDto) {
         log.info("여행 장소 생성 요청: 사용자 ID {}, 일정 ID {}", userId, planId);
         
-        // 일정 존재 여부 확인 및 권한 체크
-        Plan plan = planRepository.findByPlanIdAndUserId(planId, userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.PLAN_NOT_FOUND));
+        // 일정 존재 여부 확인 및 권한 체크 (그룹 멤버 포함)
+        Plan plan = getPlanWithPermissionCheck(userId, planId);
         
         // 순서 설정 (현재 최대 순서 + 1)
         Integer maxOrder = placeRepository.findMaxOrderByPlanId(planId);
@@ -80,9 +79,8 @@ public class PlaceService {
     public PlaceResponseDto addPlace(Integer userId, Integer planId, AddPlaceDto requestDto) {
         log.info("일정 생성 후 장소 추가 요청: 사용자 ID {}, 일정 ID {}", userId, planId);
         
-        // 일정 존재 여부 확인 및 권한 체크
-        Plan plan = planRepository.findByPlanIdAndUserId(planId, userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.PLAN_NOT_FOUND));
+        // 일정 존재 여부 확인 및 권한 체크 (그룹 멤버 포함)
+        Plan plan = getPlanWithPermissionCheck(userId, planId);
         
         // 방문 날짜 계산 (일차(dayNumber)를 이용하여 계산)
         LocalDateTime visitDate = null;
@@ -139,9 +137,8 @@ public class PlaceService {
     public PlaceResponseDto updatePlace(Integer userId, Integer planId, Integer placeId, UpdatePlaceDto requestDto) {
         log.info("여행 장소 수정 요청: 사용자 ID {}, 일정 ID {}, 장소 ID {}", userId, planId, placeId);
         
-        // 일정 존재 여부 확인 및 권한 체크
-        Plan plan = planRepository.findByPlanIdAndUserId(planId, userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.PLAN_NOT_FOUND));
+        // 일정 존재 여부 확인 및 권한 체크 (그룹 멤버 포함)
+        Plan plan = getPlanWithPermissionCheck(userId, planId);
         
         // 장소 존재 여부 확인
         Place place = placeRepository.findByPlaceIdAndPlan_PlanId(placeId, planId)
@@ -176,9 +173,8 @@ public class PlaceService {
     public void deletePlace(Integer userId, Integer planId, Integer placeId) {
         log.info("여행 장소 삭제 요청: 사용자 ID {}, 일정 ID {}, 장소 ID {}", userId, planId, placeId);
         
-        // 일정 존재 여부 확인 및 권한 체크
-        planRepository.findByPlanIdAndUserId(planId, userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.PLAN_NOT_FOUND));
+        // 일정 존재 여부 확인 및 권한 체크 (그룹 멤버 포함)
+        getPlanWithPermissionCheck(userId, planId);
         
         // 장소 존재 여부 확인
         Place place = placeRepository.findByPlaceIdAndPlan_PlanId(placeId, planId)
@@ -198,9 +194,8 @@ public class PlaceService {
     public List<PlaceResponseDto> getPlacesByPlanId(Integer userId, Integer planId) {
         log.info("여행 장소 목록 조회 요청: 사용자 ID {}, 일정 ID {}", userId, planId);
         
-        // 일정 존재 여부 확인 및 권한 체크
-        planRepository.findByPlanIdAndUserId(planId, userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.PLAN_NOT_FOUND));
+        // 일정 존재 여부 확인 및 권한 체크 (그룹 멤버 포함)
+        getPlanWithPermissionCheck(userId, planId);
         
         // 장소 목록 조회
         List<Place> places = placeRepository.findByPlanIdOrderByOrder(planId);
@@ -230,9 +225,8 @@ public class PlaceService {
         log.info("장소 순서 일괄 업데이트 요청: 사용자 ID {}, 일정 ID {}, 일차 {}, 장소 수 {}", 
                 userId, planId, dayNumber, placeIds.size());
         
-        // 일정 존재 여부 확인 및 권한 체크
-        Plan plan = planRepository.findByPlanIdAndUserId(planId, userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.PLAN_NOT_FOUND));
+        // 일정 존재 여부 확인 및 권한 체크 (그룹 멤버 포함)
+        Plan plan = getPlanWithPermissionCheck(userId, planId);
         
         // 해당 일차의 모든 장소 조회
         List<Place> places;
@@ -298,5 +292,18 @@ public class PlaceService {
         planRepository.save(plan);
         
         log.info("일정 총 비용 자동 계산 완료: 일정 ID {}, 총 비용 {}", planId, totalCost);
+    }
+    
+    /**
+     * 권한 검증이 포함된 일정 조회 (PlanService에서 위임)
+     */
+    private Plan getPlanWithPermissionCheck(Integer userId, Integer planId) {
+        try {
+            // PlanService의 권한 검증 메서드를 사용
+            return planService.getPlanWithPermissionCheck(userId, planId);
+        } catch (Exception e) {
+            log.error("Plan 권한 검증 실패: userId={}, planId={}, error={}", userId, planId, e.getMessage());
+            throw new BusinessException(ErrorCode.PLAN_NOT_FOUND);
+        }
     }
 } 

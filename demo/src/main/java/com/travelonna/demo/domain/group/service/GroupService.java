@@ -111,7 +111,8 @@ public class GroupService {
             log.debug("User is already a member: {}", exists);
             
             if (exists) {
-                throw new IllegalStateException("User is already a member of this group");
+                log.info("User {} is already a member of group {}, returning success", userId, groupUrl);
+                return; // 이미 멤버인 경우 성공으로 처리하고 종료
             }
             
             GroupMember member = GroupMember.builder()
@@ -173,5 +174,29 @@ public class GroupService {
     public GroupEntity findGroupById(Integer groupId) {
         return groupRepository.findById(groupId.longValue())
                 .orElseThrow(() -> new IllegalArgumentException("Group not found with ID: " + groupId));
+    }
+
+    /**
+     * 사용자가 특정 그룹의 멤버인지 확인합니다.
+     * @param userId 확인할 사용자 ID
+     * @param groupUrl 확인할 그룹 URL
+     * @return 멤버 여부
+     */
+    @Transactional(readOnly = true)
+    public boolean isUserMemberOfGroup(Integer userId, String groupUrl) {
+        try {
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
+            
+            GroupEntity group = groupRepository.findByUrl(groupUrl)
+                    .orElseThrow(() -> new IllegalArgumentException("Group not found with URL: " + groupUrl));
+            
+            boolean isMember = groupMemberRepository.existsByGroupAndUser(group, user);
+            log.debug("User {} membership status for group {}: {}", userId, groupUrl, isMember);
+            return isMember;
+        } catch (Exception e) {
+            log.error("Error checking group membership: {}", e.getMessage(), e);
+            return false;
+        }
     }
 } 

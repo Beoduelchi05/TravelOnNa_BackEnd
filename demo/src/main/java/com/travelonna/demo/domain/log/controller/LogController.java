@@ -43,7 +43,7 @@ public class LogController {
     private final LogService logService;
     private final UserRepository userRepository;
     
-    @Operation(summary = "여행 기록 생성", description = "여행 일정 정보를 바탕으로 새로운 여행 기록을 생성합니다. 글(comment)은 필수이며, 이미지는 선택적으로 최대 10개까지 첨부 가능합니다. placeId를 지정하면 해당 장소에 대한 기록만 생성하고, 지정하지 않으면 planId에 포함된 모든 장소에 대한 기록이 생성됩니다.")
+    @Operation(summary = "여행 기록 생성", description = "여행 일정 정보를 바탕으로 새로운 여행 기록을 생성합니다. 글(comment)은 필수이며, 이미지는 선택적으로 최대 10개까지 첨부 가능합니다. placeId를 지정하면 해당 장소에 대한 기록만 생성하고, 지정하지 않으면 planId에 포함된 모든 장소에 대한 기록이 생성됩니다.\n\n**자동 기록**: 기록 생성 시 사용자 행동 데이터(POST 액션)가 자동으로 user_actions 테이블에 기록되어 추천 시스템에 활용됩니다.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "기록 생성 성공", 
                  content = @Content(schema = @Schema(implementation = LogResponseDto.class))),
@@ -63,7 +63,7 @@ public class LogController {
                 .body(ApiResponse.success("기록이 성공적으로 생성되었습니다.", responseDto));
     }
     
-    @Operation(summary = "여행 기록 상세 조회", description = "특정 여행 기록의 상세 정보를 조회합니다.")
+    @Operation(summary = "여행 기록 상세 조회", description = "특정 여행 기록의 상세 정보를 조회합니다.\n\n**자동 기록**: 공개 기록 조회 시에만 사용자 행동 데이터(VIEW 액션)가 자동으로 user_actions 테이블에 기록되어 추천 시스템에 활용됩니다. (1시간 내 중복 조회는 기록되지 않음)")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "기록 조회 성공"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "기록을 찾을 수 없음"),
@@ -162,7 +162,7 @@ public class LogController {
         return ResponseEntity.ok(ApiResponse.success("기록이 성공적으로 삭제되었습니다.", null));
     }
     
-    @Operation(summary = "여행 기록 좋아요 토글", description = "여행 기록에 좋아요를 추가하거나 취소합니다.")
+    @Operation(summary = "여행 기록 좋아요 토글", description = "여행 기록에 좋아요를 추가하거나 취소합니다.\n\n**자동 기록**: 공개 기록에 좋아요 추가 시에만 사용자 행동 데이터(LIKE 액션)가 자동으로 user_actions 테이블에 기록되어 추천 시스템에 활용됩니다.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "좋아요 토글 성공"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "기록을 찾을 수 없음")

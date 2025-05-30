@@ -15,18 +15,22 @@ import com.travelonna.demo.domain.log.repository.LogCommentRepository;
 import com.travelonna.demo.domain.log.repository.LogRepository;
 import com.travelonna.demo.domain.user.entity.User;
 import com.travelonna.demo.domain.user.repository.UserRepository;
+import com.travelonna.demo.domain.user.service.UserActionService;
 import com.travelonna.demo.global.exception.ResourceNotFoundException;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Slf4j
 public class LogCommentService {
     
     private final LogCommentRepository logCommentRepository;
     private final LogRepository logRepository;
     private final UserRepository userRepository;
+    private final UserActionService userActionService;
     
     // 댓글 생성
     @Transactional
@@ -34,11 +38,11 @@ public class LogCommentService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         
-        Log log = logRepository.findById(logId)
+        Log logEntity = logRepository.findById(logId)
                 .orElseThrow(() -> new ResourceNotFoundException("Log not found"));
         
         // 비공개 기록인 경우 권한 확인
-        if (!log.getIsPublic() && !log.getUser().getUserId().equals(userId)) {
+        if (!logEntity.getIsPublic() && !logEntity.getUser().getUserId().equals(userId)) {
             throw new IllegalArgumentException("User is not authorized to comment on this log");
         }
         
@@ -48,7 +52,7 @@ public class LogCommentService {
         }
         
         LogComment comment = LogComment.builder()
-                .log(log)
+                .log(logEntity)
                 .user(user)
                 .locoComment(requestDto.getComment())
                 .build();
@@ -80,10 +84,20 @@ public class LogCommentService {
             
             parentComment.addReply(comment);
         } else {
-            log.addComment(comment);
+            logEntity.addComment(comment);
         }
         
         LogComment savedComment = logCommentRepository.save(comment);
+        
+        // UserAction 기록 - COMMENT 액션 (공개 기록인 경우만)
+        if (logEntity.getIsPublic()) {
+            try {
+                userActionService.recordComment(userId, logId);
+            } catch (Exception e) {
+                log.warn("사용자 액션 기록 실패: userId={}, logId={}", userId, logId, e);
+            }
+        }
+        
         return LogCommentResponseDto.fromEntity(savedComment);
     }
     
