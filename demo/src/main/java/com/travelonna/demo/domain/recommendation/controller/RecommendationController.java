@@ -2,10 +2,13 @@ package com.travelonna.demo.domain.recommendation.controller;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.travelonna.demo.domain.recommendation.dto.RecommendationRequestDto;
 import com.travelonna.demo.domain.recommendation.dto.RecommendationResponseDto;
 import com.travelonna.demo.domain.recommendation.service.RecommendationService;
 import com.travelonna.demo.global.common.ApiResponse;
@@ -16,6 +19,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -51,25 +55,21 @@ public class RecommendationController {
             description = "사용자를 찾을 수 없음"
         )
     })
-    @GetMapping
+    @PostMapping
     public ResponseEntity<ApiResponse<RecommendationResponseDto>> getRecommendations(
-            @Parameter(description = "사용자 ID", required = true, example = "123")
-            @RequestParam Integer userId,
-            
-            @Parameter(description = "추천 타입 (현재 'log'만 지원)", example = "log")
-            @RequestParam(defaultValue = "log") String type,
-            
-            @Parameter(description = "조회할 추천 개수 (기본값: 20, 최대: 50)", example = "20")
-            @RequestParam(defaultValue = "20") Integer limit) {
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                description = "추천 요청 정보",
+                content = @Content(schema = @Schema(implementation = RecommendationRequestDto.class))
+            )
+            @Valid @RequestBody RecommendationRequestDto requestDto) {
         
-        log.info("추천 목록 API 호출: userId={}, type={}, limit={}", userId, type, limit);
+        log.info("추천 목록 API 호출: userId={}, type={}, limit={}", 
+                requestDto.getUser_id(), requestDto.getRec_type(), requestDto.getRec_limit());
         
-        // 파라미터 검증
-        if (limit != null && (limit <= 0 || limit > 50)) {
-            throw new IllegalArgumentException("Limit must be between 1 and 50");
-        }
-        
-        RecommendationResponseDto responseDto = recommendationService.getRecommendations(userId, type, limit);
+        RecommendationResponseDto responseDto = recommendationService.getRecommendations(
+                requestDto.getUser_id(), 
+                requestDto.getRec_type(), 
+                requestDto.getRec_limit());
         
         String message = responseDto.getRecommendations().isEmpty() 
             ? "추천 데이터가 없습니다. 더 많은 활동을 통해 개인화된 추천을 받아보세요!" 
