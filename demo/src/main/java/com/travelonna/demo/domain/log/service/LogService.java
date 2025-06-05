@@ -91,7 +91,8 @@ public class LogService {
             Log logEntity = Log.builder()
                     .user(user)
                     .plan(plan)
-                    .comment(requestDto.getComment() + " - " + place.getName()) // 장소 이름을 댓글에 추가
+                    .place(place)  // place 참조 추가
+                    .comment(requestDto.getComment()) // 장소 이름은 place 참조로 처리하므로 comment에서 제거
                     .isPublic(requestDto.getIsPublic() != null ? requestDto.getIsPublic() : false)
                     .build();
             
@@ -140,7 +141,8 @@ public class LogService {
             Log logEntity = Log.builder()
                     .user(user)
                     .plan(plan)
-                    .comment(requestDto.getComment() + " - " + place.getName()) // 장소 이름을 댓글에 추가
+                    .place(place)  // place 참조 추가
+                    .comment(requestDto.getComment()) // 장소 이름은 place 참조로 처리하므로 comment에서 제거
                     .isPublic(requestDto.getIsPublic() != null ? requestDto.getIsPublic() : false)
                     .build();
             

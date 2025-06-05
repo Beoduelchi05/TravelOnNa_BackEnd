@@ -32,6 +32,8 @@ public class LogResponseDto {
     private int commentCount;
     private Boolean isLiked;
     private PlanSummaryDto plan;
+    private Integer placeId;      // 추가: 연관된 장소 ID
+    private String placeName;     // 추가: 연관된 장소명
     private List<String> placeNames;
     
     public static LogResponseDto fromEntity(Log log, boolean isLiked) {

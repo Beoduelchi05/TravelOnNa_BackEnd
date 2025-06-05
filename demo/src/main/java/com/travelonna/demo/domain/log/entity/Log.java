@@ -7,6 +7,7 @@ import java.util.List;
 import org.hibernate.annotations.CreationTimestamp;
 
 import com.travelonna.demo.domain.plan.entity.Plan;
+import com.travelonna.demo.domain.plan.entity.Place;
 import com.travelonna.demo.domain.user.entity.User;
 
 import jakarta.persistence.CascadeType;
@@ -48,6 +49,10 @@ public class Log {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "plan_id", nullable = false)
     private Plan plan;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "place_id", nullable = true)
+    private Place place;
     
     @Column(name = "comment", columnDefinition = "TEXT")
     private String comment;
