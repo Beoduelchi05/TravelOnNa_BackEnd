@@ -14,21 +14,33 @@ import com.travelonna.demo.domain.log.entity.Log;
 public interface LogRepository extends JpaRepository<Log, Integer> {
     
     // 사용자별 기록 조회
-    List<Log> findByUserUserIdOrderByCreatedAtDesc(Integer userId);
+    @Query("SELECT l FROM Log l LEFT JOIN FETCH l.place WHERE l.user.userId = :userId ORDER BY l.createdAt DESC")
+    List<Log> findByUserUserIdOrderByCreatedAtDesc(@Param("userId") Integer userId);
     
     // 일정별 기록 조회
-    List<Log> findByPlanPlanIdOrderByCreatedAtDesc(Integer planId);
+    @Query("SELECT l FROM Log l LEFT JOIN FETCH l.place WHERE l.plan.planId = :planId ORDER BY l.createdAt DESC")
+    List<Log> findByPlanPlanIdOrderByCreatedAtDesc(@Param("planId") Integer planId);
     
     // 공개된 모든 기록 조회
+    @Query("SELECT l FROM Log l LEFT JOIN FETCH l.place WHERE l.isPublic = true ORDER BY l.createdAt DESC")
     List<Log> findByIsPublicTrueOrderByCreatedAtDesc();
     
+    // 특정 장소별 기록 조회 - 해당 Place가 포함된 Plan의 모든 기록들을 조회
+    @Query("SELECT DISTINCT l FROM Log l LEFT JOIN FETCH l.place " +
+           "WHERE l.plan.planId IN (" +
+           "    SELECT p.plan.planId FROM Place p WHERE p.placeId = :placeId" +
+           ") " +
+           "ORDER BY l.createdAt DESC")
+    List<Log> findByPlacePlaceIdOrderByCreatedAtDesc(@Param("placeId") Integer placeId);
+    
     // 팔로잉 사용자의 공개 기록 조회
-    @Query("SELECT l FROM Log l WHERE l.user.userId IN :userIds AND l.isPublic = true ORDER BY l.createdAt DESC")
+    @Query("SELECT l FROM Log l LEFT JOIN FETCH l.place WHERE l.user.userId IN :userIds AND l.isPublic = true ORDER BY l.createdAt DESC")
     List<Log> findByUserUserIdInAndIsPublicTrueOrderByCreatedAtDesc(@Param("userIds") List<Integer> userIds);
     
-    // ID로 기록 상세 조회 (이미지, 댓글, 좋아요 포함)
+    // ID로 기록 상세 조회 (이미지, 댓글, 좋아요, 장소 포함)
     @Query("SELECT DISTINCT l FROM Log l " +
            "LEFT JOIN FETCH l.images " +
+           "LEFT JOIN FETCH l.place " +
            "WHERE l.logId = :logId")
     Optional<Log> findByIdWithDetails(@Param("logId") Integer logId);
 } 

@@ -32,9 +32,10 @@ public class LogResponseDto {
     private int commentCount;
     private Boolean isLiked;
     private PlanSummaryDto plan;
-    private Integer placeId;      // 추가: 연관된 장소 ID
-    private String placeName;     // 추가: 연관된 장소명
-    private List<String> placeNames;
+    private Integer placeId;      // 추가: 연관된 장소 ID (단일, 호환성 유지)
+    private String placeName;     // 추가: 연관된 장소명 (단일, 호환성 유지)
+    private List<Integer> placeIds;  // 추가: 모든 연관된 장소 ID들
+    private List<String> placeNames; // 수정: 모든 연관된 장소명들
     
     public static LogResponseDto fromEntity(Log log, boolean isLiked) {
         return LogResponseDto.builder()
@@ -48,6 +49,8 @@ public class LogResponseDto {
                 .commentCount(log.getComments().size())
                 .isLiked(isLiked)
                 .plan(PlanSummaryDto.fromEntity(log.getPlan()))
+                .placeId(log.getPlace() != null ? log.getPlace().getPlaceId() : null)
+                .placeName(log.getPlace() != null ? log.getPlace().getName() : null)
                 .build();
     }
 } 

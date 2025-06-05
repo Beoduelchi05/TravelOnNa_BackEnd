@@ -125,6 +125,22 @@ public class LogController {
         return ResponseEntity.ok(ApiResponse.success("공개 기록을 성공적으로 조회했습니다.", responseDtoList));
     }
     
+    @Operation(summary = "장소별 여행 기록 목록 조회", description = "특정 장소에 연결된 모든 여행 기록을 조회합니다. 이미지, 공개/비공개 여부, 댓글 내용이 포함됩니다.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "장소별 기록 목록 조회 성공"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "장소를 찾을 수 없음")
+    })
+    @GetMapping("/places/{placeId}")
+    public ResponseEntity<ApiResponse<List<LogResponseDto>>> getLogsByPlace(
+            @Parameter(description = "조회할 장소 ID", required = true, example = "6")
+            @PathVariable Integer placeId) {
+        // 현재 로그인한 사용자 ID (인증 구현 필요)
+        Integer userId = getCurrentUserId();
+        
+        List<LogResponseDto> responseDtoList = logService.getLogsByPlace(placeId, userId);
+        return ResponseEntity.ok(ApiResponse.success("장소별 기록을 성공적으로 조회했습니다.", responseDtoList));
+    }
+    
     @Operation(summary = "여행 기록 수정", description = "기존 여행 기록의 내용과 이미지를 수정합니다.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "기록 수정 성공"),

@@ -262,6 +262,13 @@ public class LogService {
                 .collect(Collectors.toList());
         responseDto.setPlaceNames(placeNames);
         
+        // Log에 직접 연결된 Place가 없는 경우, Plan의 첫 번째 Place 정보 사용
+        if (responseDto.getPlaceId() == null && responseDto.getPlaceName() == null && !places.isEmpty()) {
+            Place firstPlace = places.get(0);
+            responseDto.setPlaceId(firstPlace.getPlaceId());
+            responseDto.setPlaceName(firstPlace.getName());
+        }
+        
         return responseDto;
     }
     
@@ -282,6 +289,23 @@ public class LogService {
         List<Log> logs = logRepository.findByIsPublicTrueOrderByCreatedAtDesc();
         return convertToLogResponseDtoList(logs, userId);
     }
+    
+    // 특정 장소별 기록 조회
+    public List<LogResponseDto> getLogsByPlace(Integer placeId, Integer userId) {
+        logger.info("장소별 기록 조회 시작: placeId={}, userId={}", placeId, userId);
+        
+        List<Log> logs = logRepository.findByPlacePlaceIdOrderByCreatedAtDesc(placeId);
+        logger.info("조회된 Log 개수: {}", logs.size());
+        
+        if (logs.isEmpty()) {
+            // 디버깅: 전체 Log 개수 확인
+            long totalLogs = logRepository.count();
+            logger.info("전체 Log 개수: {}", totalLogs);
+        }
+        
+        return convertToLogResponseDtoList(logs, userId);
+    }
+
     
     // 기록 수정
     @Transactional
@@ -356,6 +380,13 @@ public class LogService {
                 .collect(Collectors.toList());
         responseDto.setPlaceNames(placeNames);
         
+        // Log에 직접 연결된 Place가 없는 경우, Plan의 첫 번째 Place 정보 사용
+        if (responseDto.getPlaceId() == null && responseDto.getPlaceName() == null && !places.isEmpty()) {
+            Place firstPlace = places.get(0);
+            responseDto.setPlaceId(firstPlace.getPlaceId());
+            responseDto.setPlaceName(firstPlace.getName());
+        }
+        
         return responseDto;
     }
     
@@ -415,6 +446,31 @@ public class LogService {
                 });
     }
     
+    // 장소 정보를 LogResponseDto에 설정하는 공통 메소드
+    private void setPlaceInfoToDto(LogResponseDto dto, Integer planId) {
+        // 여행 계획에 연결된 장소 정보 가져오기
+        List<Place> places = placeRepository.findByPlanIdOrderByOrder(planId);
+        
+        // 모든 장소 ID들 설정
+        List<Integer> placeIds = places.stream()
+                .map(Place::getPlaceId)
+                .collect(Collectors.toList());
+        dto.setPlaceIds(placeIds);
+        
+        // 모든 장소 이름들 설정 (p_name 컬럼 사용)
+        List<String> placeNames = places.stream()
+                .map(Place::getName)
+                .collect(Collectors.toList());
+        dto.setPlaceNames(placeNames);
+        
+        // 호환성을 위해 첫 번째 장소 정보도 설정
+        if (!places.isEmpty()) {
+            Place firstPlace = places.get(0);
+            dto.setPlaceId(firstPlace.getPlaceId());
+            dto.setPlaceName(firstPlace.getName());
+        }
+    }
+
     // 엔티티 리스트를 DTO 리스트로 변환
     private List<LogResponseDto> convertToLogResponseDtoList(List<Log> logs, Integer userId) {
         List<LogResponseDto> result = new ArrayList<>();
@@ -438,12 +494,8 @@ public class LogService {
                         .collect(Collectors.toList());
                 dto.setImageUrls(imageUrls);
                 
-                // 여행 계획에 연결된 장소 정보 가져오기
-                List<Place> places = placeRepository.findByPlanIdOrderByOrder(log.getPlan().getPlanId());
-                List<String> placeNames = places.stream()
-                        .map(Place::getPlace)
-                        .collect(Collectors.toList());
-                dto.setPlaceNames(placeNames);
+                // 장소 정보 설정
+                setPlaceInfoToDto(dto, log.getPlan().getPlanId());
                 
                 result.add(dto);
             }
@@ -465,10 +517,25 @@ public class LogService {
                 
                 // 여행 계획에 연결된 장소 정보 가져오기
                 List<Place> places = placeRepository.findByPlanIdOrderByOrder(log.getPlan().getPlanId());
+                
+                // 모든 장소 ID들 설정
+                List<Integer> placeIds = places.stream()
+                        .map(Place::getPlaceId)
+                        .collect(Collectors.toList());
+                dto.setPlaceIds(placeIds);
+                
+                // 모든 장소 이름들 설정 (p_name 컬럼 사용)
                 List<String> placeNames = places.stream()
-                        .map(Place::getPlace)
+                        .map(Place::getName)
                         .collect(Collectors.toList());
                 dto.setPlaceNames(placeNames);
+                
+                // 호환성을 위해 첫 번째 장소 정보도 설정
+                if (!places.isEmpty()) {
+                    Place firstPlace = places.get(0);
+                    dto.setPlaceId(firstPlace.getPlaceId());
+                    dto.setPlaceName(firstPlace.getName());
+                }
                 
                 result.add(dto);
             }
