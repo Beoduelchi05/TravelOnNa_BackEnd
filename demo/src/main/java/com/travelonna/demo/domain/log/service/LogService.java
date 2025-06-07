@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,8 +17,8 @@ import com.travelonna.demo.domain.log.entity.LogImage;
 import com.travelonna.demo.domain.log.repository.LikesRepository;
 import com.travelonna.demo.domain.log.repository.LogImageRepository;
 import com.travelonna.demo.domain.log.repository.LogRepository;
-import com.travelonna.demo.domain.plan.entity.Plan;
 import com.travelonna.demo.domain.plan.entity.Place;
+import com.travelonna.demo.domain.plan.entity.Plan;
 import com.travelonna.demo.domain.plan.repository.PlaceRepository;
 import com.travelonna.demo.domain.plan.repository.PlanRepository;
 import com.travelonna.demo.domain.user.entity.User;
@@ -26,8 +28,6 @@ import com.travelonna.demo.domain.user.service.UserActionService;
 import com.travelonna.demo.global.exception.ResourceNotFoundException;
 
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Service
 @RequiredArgsConstructor
@@ -303,9 +303,74 @@ public class LogService {
             logger.info("전체 Log 개수: {}", totalLogs);
         }
         
-        return convertToLogResponseDtoList(logs, userId);
+        return convertToLogResponseDtoListForPlace(logs, userId, placeId);
     }
 
+    // 장소별 기록 조회를 위한 별도 변환 메소드
+    private List<LogResponseDto> convertToLogResponseDtoListForPlace(List<Log> logs, Integer userId, Integer placeId) {
+        List<LogResponseDto> result = new ArrayList<>();
+        
+        if (userId != null) {
+            // 사용자가 좋아요한 기록 ID 리스트 조회
+            List<Integer> likedLogIds = likesRepository.findLogIdsByUserUserId(userId);
+            
+            for (Log log : logs) {
+                // 비공개 기록인 경우 작성자만 볼 수 있음
+                if (!log.getIsPublic() && !log.getUser().getUserId().equals(userId)) {
+                    continue;
+                }
+                
+                LogResponseDto dto = LogResponseDto.fromEntity(log, likedLogIds.contains(log.getLogId()));
+                
+                // 이미지 URL 목록 추가
+                List<String> imageUrls = log.getImages().stream()
+                        .sorted((i1, i2) -> i1.getOrderNum().compareTo(i2.getOrderNum()))
+                        .map(LogImage::getImageUrl)
+                        .collect(Collectors.toList());
+                dto.setImageUrls(imageUrls);
+                
+                // 특정 장소 정보만 설정 (해당 장소에 연결된 기록이므로)
+                if (log.getPlace() != null && log.getPlace().getPlaceId().equals(placeId)) {
+                    dto.setPlaceId(log.getPlace().getPlaceId());
+                    dto.setPlaceName(log.getPlace().getName());
+                    // 단일 장소이므로 배열에도 해당 장소만 포함
+                    dto.setPlaceIds(List.of(log.getPlace().getPlaceId()));
+                    dto.setPlaceNames(List.of(log.getPlace().getName()));
+                }
+                
+                result.add(dto);
+            }
+        } else {
+            // 로그인하지 않은 사용자는 공개 기록만 볼 수 있음
+            for (Log log : logs) {
+                if (!log.getIsPublic()) {
+                    continue;
+                }
+                
+                LogResponseDto dto = LogResponseDto.fromEntity(log, false);
+                
+                // 이미지 URL 목록 추가
+                List<String> imageUrls = log.getImages().stream()
+                        .sorted((i1, i2) -> i1.getOrderNum().compareTo(i2.getOrderNum()))
+                        .map(LogImage::getImageUrl)
+                        .collect(Collectors.toList());
+                dto.setImageUrls(imageUrls);
+                
+                // 특정 장소 정보만 설정 (해당 장소에 연결된 기록이므로)
+                if (log.getPlace() != null && log.getPlace().getPlaceId().equals(placeId)) {
+                    dto.setPlaceId(log.getPlace().getPlaceId());
+                    dto.setPlaceName(log.getPlace().getName());
+                    // 단일 장소이므로 배열에도 해당 장소만 포함
+                    dto.setPlaceIds(List.of(log.getPlace().getPlaceId()));
+                    dto.setPlaceNames(List.of(log.getPlace().getName()));
+                }
+                
+                result.add(dto);
+            }
+        }
+        
+        return result;
+    }
     
     // 기록 수정
     @Transactional

@@ -25,11 +25,9 @@ public interface LogRepository extends JpaRepository<Log, Integer> {
     @Query("SELECT l FROM Log l LEFT JOIN FETCH l.place WHERE l.isPublic = true ORDER BY l.createdAt DESC")
     List<Log> findByIsPublicTrueOrderByCreatedAtDesc();
     
-    // 특정 장소별 기록 조회 - 해당 Place가 포함된 Plan의 모든 기록들을 조회
-    @Query("SELECT DISTINCT l FROM Log l LEFT JOIN FETCH l.place " +
-           "WHERE l.plan.planId IN (" +
-           "    SELECT p.plan.planId FROM Place p WHERE p.placeId = :placeId" +
-           ") " +
+    // 특정 장소별 기록 조회 - 해당 장소에 직접 연결된 기록들만 조회
+    @Query("SELECT l FROM Log l LEFT JOIN FETCH l.place " +
+           "WHERE l.place.placeId = :placeId " +
            "ORDER BY l.createdAt DESC")
     List<Log> findByPlacePlaceIdOrderByCreatedAtDesc(@Param("placeId") Integer placeId);
     
