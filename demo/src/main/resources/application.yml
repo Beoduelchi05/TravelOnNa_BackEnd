@@ -88,6 +88,12 @@ cloud:
     stack:
       auto: false
 
+# AI 추천 서비스 설정
+ai:
+  recommendation:
+    service:
+      url: http://travelonna-ai-recommendation-service:8000
+
 # Lombok 설정 추가
 lombok:
   copyableAnnotations:
