@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.travelonna.demo.domain.recommendation.dto.RecommendationRequestDto;
 import com.travelonna.demo.domain.recommendation.dto.RecommendationResponseDto;
+import com.travelonna.demo.domain.recommendation.dto.ColdStartRecommendationRequestDto;
+import com.travelonna.demo.domain.recommendation.dto.ColdStartRecommendationResponseDto;
 import com.travelonna.demo.domain.recommendation.service.RecommendationService;
 import com.travelonna.demo.global.common.ApiResponse;
 
@@ -105,20 +107,39 @@ public class RecommendationController {
     }
     
     @Operation(
-        summary = "추천 데이터 개수 조회",
-        description = "특정 사용자의 추천 데이터 개수를 조회합니다."
+        summary = "추천 개수 조회",
+        description = "사용자별 특정 타입의 추천 개수를 조회합니다"
     )
     @GetMapping("/count")
     public ResponseEntity<ApiResponse<Long>> getRecommendationCount(
-            @Parameter(description = "사용자 ID", required = true)
             @RequestParam Integer userId,
-            
-            @Parameter(description = "추천 타입", example = "log")
-            @RequestParam(defaultValue = "log") String type) {
+            @RequestParam String type) {
         
         long count = recommendationService.getRecommendationCount(userId, type);
-        String message = String.format("사용자의 추천 데이터 개수: %d건", count);
         
-        return ResponseEntity.ok(ApiResponse.success(message, count));
+        return ResponseEntity.ok(ApiResponse.success(
+            String.format("추천 개수를 성공적으로 조회했습니다 (%d개)", count),
+            count
+        ));
+    }
+    
+    /**
+     * 콜드스타트용 무작위 공개 기록 추천
+     */
+    @PostMapping("/coldstart")
+    @Operation(summary = "콜드스타트 추천", description = "신규 사용자를 위한 무작위 공개 기록 추천")
+    public ResponseEntity<ApiResponse<ColdStartRecommendationResponseDto>> getColdStartRecommendations(
+            @RequestBody @Valid ColdStartRecommendationRequestDto requestDto) {
+        
+        ColdStartRecommendationResponseDto responseDto = recommendationService.getColdStartRecommendations(
+            requestDto.getUserId(), 
+            requestDto.getLimit(), 
+            requestDto.getExcludeLogIds()
+        );
+        
+        return ResponseEntity.ok(ApiResponse.success(
+            String.format("콜드스타트 추천을 성공적으로 조회했습니다 (%d건)", responseDto.getLogs().size()),
+            responseDto
+        ));
     }
 } 

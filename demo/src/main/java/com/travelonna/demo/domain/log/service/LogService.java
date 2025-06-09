@@ -290,6 +290,30 @@ public class LogService {
         return convertToLogResponseDtoList(logs, userId);
     }
     
+    // 콜드스타트용 무작위 공개 기록 조회 (중복 제외)
+    public List<LogResponseDto> getRandomPublicLogs(Integer userId, Integer limit, List<Integer> excludeLogIds) {
+        logger.info("무작위 공개 기록 조회: userId={}, limit={}, 제외할 로그 수={}", 
+                   userId, limit, excludeLogIds != null ? excludeLogIds.size() : 0);
+        
+        List<Log> allPublicLogs = logRepository.findByIsPublicTrueOrderByCreatedAtDesc();
+        
+        // 제외할 로그 ID들 필터링
+        List<Log> filteredLogs = allPublicLogs.stream()
+                .filter(log -> excludeLogIds == null || !excludeLogIds.contains(log.getLogId()))
+                .collect(Collectors.toList());
+        
+        // 무작위 셔플 후 제한된 개수만 선택
+        List<Log> randomLogs = filteredLogs.stream()
+                .sorted((a, b) -> Math.random() < 0.5 ? -1 : 1) // 간단한 무작위 정렬
+                .limit(limit != null && limit > 0 ? limit : 10)
+                .collect(Collectors.toList());
+        
+        logger.info("무작위 공개 기록 선택 완료: 전체={}, 필터링후={}, 최종선택={}", 
+                   allPublicLogs.size(), filteredLogs.size(), randomLogs.size());
+        
+        return convertToLogResponseDtoList(randomLogs, userId);
+    }
+    
     // 특정 장소별 기록 조회
     public List<LogResponseDto> getLogsByPlace(Integer placeId, Integer userId) {
         logger.info("장소별 기록 조회 시작: placeId={}, userId={}", placeId, userId);

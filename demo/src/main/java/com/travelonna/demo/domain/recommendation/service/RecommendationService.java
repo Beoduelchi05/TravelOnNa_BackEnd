@@ -6,6 +6,10 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.travelonna.demo.domain.log.entity.Log;
+import com.travelonna.demo.domain.log.repository.LogRepository;
+import com.travelonna.demo.domain.log.service.LogService;
+import com.travelonna.demo.domain.recommendation.dto.ColdStartRecommendationResponseDto;
 import com.travelonna.demo.domain.recommendation.dto.RecommendationResponseDto;
 import com.travelonna.demo.domain.recommendation.dto.RecommendationResponseDto.RecommendationItemDto;
 import com.travelonna.demo.domain.recommendation.entity.Recommendation.ItemType;
@@ -28,6 +32,8 @@ public class RecommendationService {
     
     private final RecommendationRepository recommendationRepository;
     private final UserRepository userRepository;
+    private final LogRepository logRepository;
+    private final LogService logService;
     private final AIRecommendationClient aiRecommendationClient;
     
     public RecommendationResponseDto getRecommendations(Integer userId, String type, Integer limit) {
@@ -109,19 +115,62 @@ public class RecommendationService {
     }
     
     /**
-     * AI 서비스 응답을 RecommendationItemDto로 변환
+     * AI 서비스 응답을 RecommendationItemDto로 변환 (실제 로그 정보 보강)
      */
     private RecommendationItemDto convertAIItemToDto(AIRecommendationItem aiItem, String type) {
-        return RecommendationItemDto.builder()
-                .itemId(aiItem.getItemId())
-                .score(aiItem.getScore() != null ? aiItem.getScore().floatValue() : 0.0f)
-                .logId(type.equals("log") ? aiItem.getItemId() : null)
-                .userId(null)  // AI 서비스에서는 제공하지 않음
-                .planId(null)
-                .comment(null)
-                .createdAt(null)
-                .isPublic(null)
-                .build();
+        if (!type.equals("log")) {
+            // log 타입이 아닌 경우 기본 정보만 반환
+            return RecommendationItemDto.builder()
+                    .itemId(aiItem.getItemId())
+                    .score(aiItem.getScore() != null ? aiItem.getScore().floatValue() : 0.0f)
+                    .build();
+        }
+        
+        // log 타입인 경우 실제 로그 정보 조회
+        Integer logId = aiItem.getItemId();
+        try {
+            Log logEntity = logRepository.findByIdWithDetails(logId).orElse(null);
+            
+            if (logEntity != null && logEntity.getIsPublic()) {
+                // 공개 로그인 경우 상세 정보 포함
+                return RecommendationItemDto.builder()
+                        .itemId(logId)
+                        .score(aiItem.getScore() != null ? aiItem.getScore().floatValue() : 0.0f)
+                        .logId(logId)
+                        .userId(logEntity.getUser().getUserId())
+                        .planId(logEntity.getPlan() != null ? logEntity.getPlan().getPlanId() : null)
+                        .comment(logEntity.getComment())
+                        .createdAt(logEntity.getCreatedAt())
+                        .isPublic(logEntity.getIsPublic())
+                        .build();
+            } else {
+                // 비공개 로그이거나 로그가 없는 경우 기본 정보만 반환
+                log.warn("추천된 로그가 비공개이거나 존재하지 않음: logId={}", logId);
+                return RecommendationItemDto.builder()
+                        .itemId(logId)
+                        .score(aiItem.getScore() != null ? aiItem.getScore().floatValue() : 0.0f)
+                        .logId(logId)
+                        .userId(null)
+                        .planId(null)
+                        .comment(null)
+                        .createdAt(null)
+                        .isPublic(null)
+                        .build();
+            }
+        } catch (Exception e) {
+            log.error("로그 정보 조회 실패: logId={}, error={}", logId, e.getMessage());
+            // 에러 발생 시 기본 정보만 반환
+            return RecommendationItemDto.builder()
+                    .itemId(logId)
+                    .score(aiItem.getScore() != null ? aiItem.getScore().floatValue() : 0.0f)
+                    .logId(logId)
+                    .userId(null)
+                    .planId(null)
+                    .comment(null)
+                    .createdAt(null)
+                    .isPublic(null)
+                    .build();
+        }
     }
     
     public boolean hasRecommendations(Integer userId, String type) {
@@ -170,5 +219,35 @@ public class RecommendationService {
         } catch (IllegalArgumentException e) {
             return 0;
         }
+    }
+    
+    /**
+     * 콜드스타트용 무작위 공개 기록 추천
+     */
+    public ColdStartRecommendationResponseDto getColdStartRecommendations(Integer userId, Integer limit, List<Integer> excludeLogIds) {
+        log.info("콜드스타트 추천 요청: userId={}, limit={}, 제외 로그 수={}", 
+                userId, limit, excludeLogIds != null ? excludeLogIds.size() : 0);
+        
+        // 사용자 존재 확인
+        userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: ID=" + userId));
+        
+        // LogService를 통해 무작위 공개 로그 조회
+        List<com.travelonna.demo.domain.log.dto.LogResponseDto> randomLogs = 
+            logService.getRandomPublicLogs(userId, limit, excludeLogIds);
+        
+        // 로그 ID 목록 추출 (다음 요청 시 중복 방지용)
+        List<Integer> logIds = randomLogs.stream()
+                .map(com.travelonna.demo.domain.log.dto.LogResponseDto::getLogId)
+                .collect(Collectors.toList());
+        
+        log.info("콜드스타트 추천 완료: userId={}, 추천 수={}", userId, randomLogs.size());
+        
+        return ColdStartRecommendationResponseDto.builder()
+                .userId(userId)
+                .recommendationType("coldstart")
+                .logs(randomLogs)
+                .logIds(logIds)
+                .build();
     }
 } 
