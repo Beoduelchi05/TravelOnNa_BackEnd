@@ -26,6 +26,6 @@ public class ColdStartRecommendationResponseDto {
     @Schema(description = "무작위 추천된 공개 로그 목록")
     private List<LogResponseDto> logs;
     
-    @Schema(description = "추천된 로그 ID 목록 (중복 방지용)", example = "[101, 102, 103]")
-    private List<Integer> logIds;
+    @Schema(description = "더 많은 데이터 존재 여부", example = "true")
+    private Boolean hasMore;
 } 

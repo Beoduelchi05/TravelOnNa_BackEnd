@@ -1,10 +1,9 @@
 package com.travelonna.demo.domain.recommendation.dto;
 
-import java.util.List;
-
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import lombok.Data;
 
 @Data
@@ -19,6 +18,7 @@ public class ColdStartRecommendationRequestDto {
     @Schema(description = "추천 개수 (기본값: 10)", example = "10", defaultValue = "10")
     private Integer limit = 10;
     
-    @Schema(description = "제외할 로그 ID 목록 (중복 방지용)", example = "[101, 102, 103]")
-    private List<Integer> excludeLogIds;
+    @PositiveOrZero(message = "오프셋은 0 이상이어야 합니다")
+    @Schema(description = "페이지 오프셋 (기본값: 0)", example = "0", defaultValue = "0")
+    private Integer offset = 0;
 } 

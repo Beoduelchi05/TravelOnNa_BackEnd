@@ -314,6 +314,40 @@ public class LogService {
         return convertToLogResponseDtoList(randomLogs, userId);
     }
     
+    // 콜드스타트용 무작위 공개 기록 조회 (페이지네이션 방식)
+    public List<LogResponseDto> getRandomPublicLogsWithPagination(Integer userId, Integer limit, Integer offset) {
+        logger.info("무작위 공개 기록 조회 (페이지네이션): userId={}, limit={}, offset={}", 
+                   userId, limit, offset);
+        
+        List<Log> allPublicLogs = logRepository.findByIsPublicTrueOrderByCreatedAtDesc();
+        
+        // 일관된 무작위 순서를 위해 사용자 ID를 시드로 사용
+        List<Log> shuffledLogs = allPublicLogs.stream()
+                .sorted((a, b) -> {
+                    // 사용자 ID와 로그 ID를 조합한 해시로 일관된 정렬
+                    int hashA = (userId.toString() + a.getLogId().toString()).hashCode();
+                    int hashB = (userId.toString() + b.getLogId().toString()).hashCode();
+                    return Integer.compare(hashA, hashB);
+                })
+                .collect(Collectors.toList());
+        
+        // 페이지네이션 적용
+        int startIndex = offset != null ? offset : 0;
+        int endIndex = Math.min(startIndex + (limit != null ? limit : 10), shuffledLogs.size());
+        
+        if (startIndex >= shuffledLogs.size()) {
+            logger.info("요청한 오프셋이 전체 데이터를 초과: offset={}, total={}", startIndex, shuffledLogs.size());
+            return List.of(); // 빈 리스트 반환
+        }
+        
+        List<Log> pageLogList = shuffledLogs.subList(startIndex, endIndex);
+        
+        logger.info("무작위 공개 기록 페이지네이션 완료: 전체={}, 선택범위={}~{}, 최종선택={}", 
+                   shuffledLogs.size(), startIndex, endIndex - 1, pageLogList.size());
+        
+        return convertToLogResponseDtoList(pageLogList, userId);
+    }
+    
     // 특정 장소별 기록 조회
     public List<LogResponseDto> getLogsByPlace(Integer placeId, Integer userId) {
         logger.info("장소별 기록 조회 시작: placeId={}, userId={}", placeId, userId);

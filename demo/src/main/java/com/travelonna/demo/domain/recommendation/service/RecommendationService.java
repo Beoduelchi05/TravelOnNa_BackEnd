@@ -70,8 +70,8 @@ public class RecommendationService {
         if (!projections.isEmpty()) {
             log.info("배치 데이터 사용: userId={}, 결과 수={}", userId, projections.size());
             
-            List<RecommendationItemDto> recommendationItems = projections.stream()
-                    .map(this::convertToRecommendationItemDto)
+        List<RecommendationItemDto> recommendationItems = projections.stream()
+                .map(this::convertToRecommendationItemDto)
                     .collect(Collectors.toList());
             
             return RecommendationResponseDto.builder()
@@ -222,24 +222,19 @@ public class RecommendationService {
     }
     
     /**
-     * 콜드스타트용 무작위 공개 기록 추천
+     * 콜드스타트용 무작위 공개 기록 추천 (페이지네이션 방식)
      */
-    public ColdStartRecommendationResponseDto getColdStartRecommendations(Integer userId, Integer limit, List<Integer> excludeLogIds) {
-        log.info("콜드스타트 추천 요청: userId={}, limit={}, 제외 로그 수={}", 
-                userId, limit, excludeLogIds != null ? excludeLogIds.size() : 0);
+    public ColdStartRecommendationResponseDto getColdStartRecommendations(Integer userId, Integer limit, Integer offset) {
+        log.info("콜드스타트 추천 요청: userId={}, limit={}, offset={}", 
+                userId, limit, offset);
         
         // 사용자 존재 확인
         userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: ID=" + userId));
         
-        // LogService를 통해 무작위 공개 로그 조회
+        // LogService를 통해 무작위 공개 로그 조회 (페이지네이션)
         List<com.travelonna.demo.domain.log.dto.LogResponseDto> randomLogs = 
-            logService.getRandomPublicLogs(userId, limit, excludeLogIds);
-        
-        // 로그 ID 목록 추출 (다음 요청 시 중복 방지용)
-        List<Integer> logIds = randomLogs.stream()
-                .map(com.travelonna.demo.domain.log.dto.LogResponseDto::getLogId)
-                .collect(Collectors.toList());
+            logService.getRandomPublicLogsWithPagination(userId, limit, offset);
         
         log.info("콜드스타트 추천 완료: userId={}, 추천 수={}", userId, randomLogs.size());
         
@@ -247,7 +242,7 @@ public class RecommendationService {
                 .userId(userId)
                 .recommendationType("coldstart")
                 .logs(randomLogs)
-                .logIds(logIds)
+                .hasMore(randomLogs.size() == limit) // 더 많은 데이터가 있는지 여부
                 .build();
     }
 } 

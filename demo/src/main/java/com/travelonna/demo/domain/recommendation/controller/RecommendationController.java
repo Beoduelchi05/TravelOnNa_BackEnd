@@ -8,10 +8,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.travelonna.demo.domain.recommendation.dto.RecommendationRequestDto;
-import com.travelonna.demo.domain.recommendation.dto.RecommendationResponseDto;
 import com.travelonna.demo.domain.recommendation.dto.ColdStartRecommendationRequestDto;
 import com.travelonna.demo.domain.recommendation.dto.ColdStartRecommendationResponseDto;
+import com.travelonna.demo.domain.recommendation.dto.RecommendationRequestDto;
+import com.travelonna.demo.domain.recommendation.dto.RecommendationResponseDto;
 import com.travelonna.demo.domain.recommendation.service.RecommendationService;
 import com.travelonna.demo.global.common.ApiResponse;
 
@@ -127,14 +127,14 @@ public class RecommendationController {
      * 콜드스타트용 무작위 공개 기록 추천
      */
     @PostMapping("/coldstart")
-    @Operation(summary = "콜드스타트 추천", description = "신규 사용자를 위한 무작위 공개 기록 추천")
+    @Operation(summary = "콜드스타트 추천", description = "신규 사용자를 위한 무작위 공개 기록 추천 (페이지네이션 방식)")
     public ResponseEntity<ApiResponse<ColdStartRecommendationResponseDto>> getColdStartRecommendations(
             @RequestBody @Valid ColdStartRecommendationRequestDto requestDto) {
         
         ColdStartRecommendationResponseDto responseDto = recommendationService.getColdStartRecommendations(
             requestDto.getUserId(), 
             requestDto.getLimit(), 
-            requestDto.getExcludeLogIds()
+            requestDto.getOffset()
         );
         
         return ResponseEntity.ok(ApiResponse.success(
