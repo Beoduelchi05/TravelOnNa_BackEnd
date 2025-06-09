@@ -68,10 +68,10 @@ public class RecommendationService {
         
         // 배치 데이터가 있으면 사용 (빠른 경로)
         if (!projections.isEmpty()) {
-            log.info("배치 데이터 사용: userId={}, 결과 수={}", userId, projections.size());
+            log.info("✅ 개인화 추천 사용: userId={}, 결과 수={}", userId, projections.size());
             
-        List<RecommendationItemDto> recommendationItems = projections.stream()
-                .map(this::convertToRecommendationItemDto)
+            List<RecommendationItemDto> recommendationItems = projections.stream()
+                    .map(this::convertToRecommendationItemDto)
                     .collect(Collectors.toList());
             
             return RecommendationResponseDto.builder()
@@ -81,18 +81,48 @@ public class RecommendationService {
                     .build();
         }
         
-        // 2. 배치 데이터가 없으면 AI 서비스 실시간 호출
+        // 2. 배치 데이터가 없으면 AI 서비스 실시간 호출 시도
         log.info("배치 데이터 없음, AI 서비스 실시간 호출: userId={}", userId);
         
         int effectiveLimit = (limit != null && limit > 0) ? limit : 10;
         AIRecommendationResponse aiResponse = aiRecommendationClient.getRecommendations(userId, type, effectiveLimit);
         
-        // AI 서비스 응답을 DTO로 변환
-        List<RecommendationItemDto> recommendationItems = aiResponse.getRecommendations().stream()
-                .map(aiItem -> convertAIItemToDto(aiItem, type))
+        // AI 서비스 응답이 충분하면 사용
+        if (aiResponse.getRecommendations() != null && !aiResponse.getRecommendations().isEmpty()) {
+            log.info("✅ AI 실시간 추천 사용: userId={}, 결과 수={}", userId, aiResponse.getRecommendations().size());
+            
+            List<RecommendationItemDto> recommendationItems = aiResponse.getRecommendations().stream()
+                    .map(aiItem -> convertAIItemToDto(aiItem, type))
+                    .collect(Collectors.toList());
+            
+            return RecommendationResponseDto.builder()
+                    .userId(userId)
+                    .itemType(type.toLowerCase())
+                    .recommendations(recommendationItems)
+                    .build();
+        }
+        
+        // 3. AI 서비스도 실패하면 콜드스타트 추천으로 자동 전환
+        log.info("⚠️ AI 추천 실패 - 콜드스타트 추천으로 자동 전환: userId={}", userId);
+        
+        List<com.travelonna.demo.domain.log.dto.LogResponseDto> coldStartLogs = 
+            logService.getRandomPublicLogsWithPagination(userId, effectiveLimit, 0);
+        
+        // 콜드스타트 로그를 RecommendationItemDto 형식으로 변환
+        List<RecommendationItemDto> recommendationItems = coldStartLogs.stream()
+                .map(logDto -> RecommendationItemDto.builder()
+                        .itemId(logDto.getLogId())
+                        .score(0.5f) // 콜드스타트는 기본 점수
+                        .logId(logDto.getLogId())
+                        .userId(logDto.getUserId())
+                        .planId(logDto.getPlan() != null ? logDto.getPlan().getPlanId() : null)
+                        .comment(logDto.getComment())
+                        .createdAt(logDto.getCreatedAt())
+                        .isPublic(logDto.getIsPublic())
+                        .build())
                 .collect(Collectors.toList());
         
-        log.debug("AI 서비스 기반 추천 완료: userId={}, 결과 수={}", userId, recommendationItems.size());
+        log.info("✅ 콜드스타트 추천 제공: userId={}, 결과 수={}", userId, recommendationItems.size());
         
         return RecommendationResponseDto.builder()
                 .userId(userId)
