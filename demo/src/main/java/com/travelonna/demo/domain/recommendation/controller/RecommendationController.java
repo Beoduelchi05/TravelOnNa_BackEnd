@@ -20,11 +20,14 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import java.util.Map;
 
 @Tag(name = "추천", description = "AI 기반 개인화 추천 API")
 @RestController
@@ -148,67 +151,33 @@ public class RecommendationController {
     // ===== 배치 관리 API =====
     
     @PostMapping("/batch/trigger")
-    @Operation(
-        summary = "AI 추천 배치 처리 트리거", 
-        description = "AI 추천 서비스의 배치 처리를 수동으로 시작합니다.\n\n" +
-                     "**배치 타입**:\n" +
-                     "- `full`: 전체 사용자 대상 배치 (새벽 2시 실행되는 것과 동일)\n" +
-                     "- `incremental`: 최근 활동 사용자만 대상 (6시간마다 실행되는 것과 동일)\n\n" +
-                     "**주의**: 배치 처리는 시간이 오래 걸릴 수 있습니다 (수 분 소요)"
-    )
-    @ApiResponses({
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "200", 
-            description = "배치 처리 트리거 성공"
-        ),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "400", 
-            description = "잘못된 배치 타입"
-        ),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "500", 
-            description = "AI 서비스 호출 실패"
-        )
+    @Operation(summary = "추천 배치 처리 트리거", 
+              description = "AI 추천 서비스의 배치 처리를 수동으로 실행합니다 (비동기 처리)")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "배치 처리 시작 성공"),
+        @ApiResponse(responseCode = "400", description = "잘못된 요청"),
+        @ApiResponse(responseCode = "500", description = "배치 처리 시작 실패")
     })
-    public ResponseEntity<ApiResponse<AIRecommendationClient.BatchTriggerResponse>> triggerBatch(
-            @Parameter(description = "배치 타입", example = "full", required = true)
-            @RequestParam String batchType) {
-        
-        log.info("배치 처리 트리거 API 호출: batchType={}", batchType);
-        
-        // 배치 타입 유효성 검사
-        if (!batchType.equals("full") && !batchType.equals("incremental")) {
-            return ResponseEntity.badRequest().body(
-                ApiResponse.error("배치 타입은 'full' 또는 'incremental'이어야 합니다")
-            );
-        }
-        
+    public ResponseEntity<com.travelonna.demo.global.common.ApiResponse<Map<String, Object>>> triggerBatch(
+            @Parameter(description = "배치 타입 (full: 전체, incremental: 증분)", example = "full")
+            @RequestParam(defaultValue = "incremental") String batchType,
+            @Parameter(description = "처리할 최대 사용자 수 (full batch 전용, 미지정 시 전체 처리)", example = "100")
+            @RequestParam(required = false) Integer userLimit
+    ) {
         try {
-            AIRecommendationClient.BatchTriggerResponse response = aiRecommendationClient.triggerBatch(batchType);
+            log.info("📡 배치 처리 트리거 요청: batchType={}, userLimit={}", batchType, userLimit);
             
-            if (response.isSuccess()) {
-                log.info("배치 처리 트리거 성공: batchType={}, duration={}초", 
-                        batchType, response.getDurationSeconds());
-                
-                return ResponseEntity.ok(ApiResponse.success(
-                    String.format("%s 배치 처리를 성공적으로 시작했습니다 (소요시간: %.1f초)", 
-                                 batchType, response.getDurationSeconds() != null ? response.getDurationSeconds() : 0.0),
-                    response
-                ));
-            } else {
-                log.error("배치 처리 트리거 실패: batchType={}, message={}", batchType, response.getMessage());
-                
-                return ResponseEntity.ok(ApiResponse.error(
-                    String.format("배치 처리 트리거 실패: %s", response.getMessage())
-                ));
-            }
+            Map<String, Object> result = aiRecommendationClient.triggerBatch(batchType, userLimit);
+            
+            return ResponseEntity.ok(com.travelonna.demo.global.common.ApiResponse.success(
+                "배치 처리가 백그라운드에서 시작되었습니다", 
+                result
+            ));
             
         } catch (Exception e) {
-            log.error("배치 처리 트리거 중 예외 발생: batchType={}, error={}", batchType, e.getMessage());
-            
-            return ResponseEntity.status(500).body(
-                ApiResponse.error("배치 처리 트리거 중 오류가 발생했습니다: " + e.getMessage())
-            );
+            log.error("❌ 배치 처리 트리거 실패: batchType={}, error={}", batchType, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(com.travelonna.demo.global.common.ApiResponse.error("배치 처리 트리거 실패: " + e.getMessage()));
         }
     }
     

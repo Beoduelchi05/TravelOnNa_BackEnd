@@ -85,6 +85,51 @@ public class AIRecommendationClient {
     }
     
     /**
+     * AI 추천 서비스에서 배치 처리 트리거 (userLimit 지원)
+     */
+    public java.util.Map<String, Object> triggerBatch(String batchType, Integer userLimit) {
+        try {
+            String url = String.format("%s/api/v1/batch/trigger?batchType=%s", aiServiceUrl, batchType);
+            if (userLimit != null) {
+                url += "&userLimit=" + userLimit;
+            }
+            
+            log.info("AI 추천 배치 트리거 호출 (userLimit 지원): {}", url);
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+            
+            ResponseEntity<java.util.Map> response = restTemplate.exchange(
+                url, HttpMethod.POST, entity, java.util.Map.class);
+            
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                log.info("AI 추천 배치 트리거 성공 (userLimit 지원): batchType={}, userLimit={}", 
+                        batchType, userLimit);
+                return response.getBody();
+            } else {
+                log.warn("AI 추천 배치 트리거 응답 실패: batchType={}, userLimit={}", batchType, userLimit);
+                return java.util.Map.of(
+                    "success", false,
+                    "message", "AI 서비스 응답 오류",
+                    "batch_type", batchType,
+                    "user_limit", userLimit
+                );
+            }
+            
+        } catch (Exception e) {
+            log.error("AI 추천 배치 트리거 실패: batchType={}, userLimit={}, error={}", 
+                     batchType, userLimit, e.getMessage());
+            return java.util.Map.of(
+                "success", false,
+                "message", "배치 트리거 호출 실패: " + e.getMessage(),
+                "batch_type", batchType,
+                "user_limit", userLimit
+            );
+        }
+    }
+    
+    /**
      * AI 추천 서비스에서 배치 상태 조회
      */
     public BatchStatusResponse getBatchStatus() {
