@@ -1,6 +1,7 @@
 package com.travelonna.demo.domain.recommendation.service;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -73,6 +74,77 @@ public class RecommendationService {
             List<RecommendationItemDto> recommendationItems = projections.stream()
                     .map(this::convertToRecommendationItemDto)
                     .collect(Collectors.toList());
+            
+            // **하이브리드 로직**: 배치 데이터가 요청한 limit보다 적으면 추가로 채우기
+            int effectiveLimit = (limit != null && limit > 0) ? limit : 10;
+            int remaining = effectiveLimit - recommendationItems.size();
+            if (remaining > 0) {
+                log.info("🔄 배치 데이터 부족 ({}/{}개) - {}개 추가로 채우기", 
+                        recommendationItems.size(), effectiveLimit, remaining);
+                
+                // 이미 추천된 아이템 ID들을 제외 목록으로 만들기
+                Set<Integer> excludeIds = recommendationItems.stream()
+                        .map(RecommendationItemDto::getItemId)
+                        .collect(Collectors.toSet());
+                
+                // AI 서비스로 추가 추천 시도
+                try {
+                    AIRecommendationResponse aiResponse = aiRecommendationClient.getRecommendations(
+                            userId, type, remaining);
+                    
+                    if (aiResponse.getRecommendations() != null) {
+                        final Set<Integer> finalExcludeIds = excludeIds;
+                        List<RecommendationItemDto> additionalItems = aiResponse.getRecommendations().stream()
+                                .filter(aiItem -> !finalExcludeIds.contains(aiItem.getItemId())) // 중복 제거
+                                .map(aiItem -> convertAIItemToDto(aiItem, type))
+                                .limit(remaining) // 필요한 개수만
+                                .collect(Collectors.toList());
+                        
+                        recommendationItems.addAll(additionalItems);
+                        remaining -= additionalItems.size();
+                        
+                        log.info("✅ AI 추천 추가: {}개 (남은 개수: {}개)", additionalItems.size(), remaining);
+                    }
+                } catch (Exception e) {
+                    log.warn("⚠️ AI 추천 추가 실패: {}", e.getMessage());
+                }
+                
+                // 여전히 부족하면 콜드스타트로 채우기
+                if (remaining > 0) {
+                    log.info("🔄 여전히 부족 - 콜드스타트로 {}개 채우기", remaining);
+                    
+                    // 현재 추천된 아이템들 업데이트
+                    Set<Integer> finalExcludeIds = recommendationItems.stream()
+                            .map(RecommendationItemDto::getItemId)
+                            .collect(Collectors.toSet());
+                    
+                    List<com.travelonna.demo.domain.log.dto.LogResponseDto> coldStartLogs = 
+                        logService.getRandomPublicLogsWithPagination(userId, remaining, 0);
+                    
+                    List<RecommendationItemDto> coldStartItems = coldStartLogs.stream()
+                            .filter(logDto -> !finalExcludeIds.contains(logDto.getLogId())) // 중복 제거
+                            .map(logDto -> RecommendationItemDto.builder()
+                                    .itemId(logDto.getLogId())
+                                    .score(0.3f) // 콜드스타트는 낮은 점수
+                                    .logId(logDto.getLogId())
+                                    .userId(logDto.getUserId())
+                                    .planId(logDto.getPlan() != null ? logDto.getPlan().getPlanId() : null)
+                                    .comment(logDto.getComment())
+                                    .createdAt(logDto.getCreatedAt())
+                                    .isPublic(logDto.getIsPublic())
+                                    .build())
+                            .limit(remaining)
+                            .collect(Collectors.toList());
+                    
+                    recommendationItems.addAll(coldStartItems);
+                    
+                    log.info("✅ 콜드스타트 추가: {}개", coldStartItems.size());
+                }
+                
+                log.info("🎯 하이브리드 추천 완료: 총 {}개 (배치 {}개 + 추가 {}개)", 
+                        recommendationItems.size(), projections.size(), 
+                        recommendationItems.size() - projections.size());
+            }
             
             return RecommendationResponseDto.builder()
                     .userId(userId)
