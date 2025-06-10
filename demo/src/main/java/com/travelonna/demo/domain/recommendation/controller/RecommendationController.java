@@ -20,7 +20,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -154,11 +153,11 @@ public class RecommendationController {
     @Operation(summary = "추천 배치 처리 트리거", 
               description = "AI 추천 서비스의 배치 처리를 수동으로 실행합니다 (비동기 처리)")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "배치 처리 시작 성공"),
-        @ApiResponse(responseCode = "400", description = "잘못된 요청"),
-        @ApiResponse(responseCode = "500", description = "배치 처리 시작 실패")
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "배치 처리 시작 성공"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 요청"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "배치 처리 시작 실패")
     })
-    public ResponseEntity<com.travelonna.demo.global.common.ApiResponse<Map<String, Object>>> triggerBatch(
+    public ResponseEntity<ApiResponse<Map<String, Object>>> triggerBatch(
             @Parameter(description = "배치 타입 (full: 전체, incremental: 증분)", example = "full")
             @RequestParam(defaultValue = "incremental") String batchType,
             @Parameter(description = "처리할 최대 사용자 수 (full batch 전용, 미지정 시 전체 처리)", example = "100")
@@ -169,7 +168,7 @@ public class RecommendationController {
             
             Map<String, Object> result = aiRecommendationClient.triggerBatch(batchType, userLimit);
             
-            return ResponseEntity.ok(com.travelonna.demo.global.common.ApiResponse.success(
+            return ResponseEntity.ok(ApiResponse.success(
                 "배치 처리가 백그라운드에서 시작되었습니다", 
                 result
             ));
@@ -177,7 +176,7 @@ public class RecommendationController {
         } catch (Exception e) {
             log.error("❌ 배치 처리 트리거 실패: batchType={}, error={}", batchType, e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(com.travelonna.demo.global.common.ApiResponse.error("배치 처리 트리거 실패: " + e.getMessage()));
+                    .body(ApiResponse.error("배치 처리 트리거 실패: " + e.getMessage()));
         }
     }
     
