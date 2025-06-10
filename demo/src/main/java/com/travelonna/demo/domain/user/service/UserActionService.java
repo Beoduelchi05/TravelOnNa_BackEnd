@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.travelonna.demo.domain.user.entity.UserAction;
@@ -24,7 +25,7 @@ public class UserActionService {
     /**
      * 사용자 액션 기록
      */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void recordAction(Integer userId, Integer targetId, ActionType actionType, TargetType targetType) {
         try {
             UserAction userAction = UserAction.builder()
@@ -48,7 +49,7 @@ public class UserActionService {
     /**
      * 여행 기록 작성 액션
      */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void recordLogCreation(Integer userId, Integer logId) {
         recordAction(userId, logId, ActionType.POST, TargetType.LOG);
     }
@@ -56,7 +57,7 @@ public class UserActionService {
     /**
      * 좋아요 액션
      */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void recordLike(Integer userId, Integer logId) {
         recordAction(userId, logId, ActionType.LIKE, TargetType.LOG);
     }
@@ -64,7 +65,7 @@ public class UserActionService {
     /**
      * 댓글 작성 액션
      */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void recordComment(Integer userId, Integer logId) {
         recordAction(userId, logId, ActionType.COMMENT, TargetType.LOG);
     }
@@ -72,7 +73,7 @@ public class UserActionService {
     /**
      * 조회 액션
      */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void recordView(Integer userId, Integer targetId, TargetType targetType) {
         // 중복 조회 방지: 같은 사용자가 같은 대상을 최근 1시간 내에 조회한 경우 기록하지 않음
         LocalDateTime oneHourAgo = LocalDateTime.now().minusHours(1);
@@ -93,7 +94,7 @@ public class UserActionService {
     /**
      * 여행 계획 작성 액션
      */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void recordPlanCreation(Integer userId, Integer planId) {
         recordAction(userId, planId, ActionType.POST, TargetType.PLAN);
     }
@@ -101,7 +102,7 @@ public class UserActionService {
     /**
      * 장소 조회 액션
      */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void recordPlaceView(Integer userId, Integer placeId) {
         recordView(userId, placeId, TargetType.PLACE);
     }
