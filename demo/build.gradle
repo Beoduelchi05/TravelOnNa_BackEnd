@@ -57,6 +57,7 @@ dependencies {
     // 테스트 관련 의존성
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
+    testRuntimeOnly 'com.h2database:h2'  // 테스트용 H2 데이터베이스
 
     // AWS S3 의존성 - AWS SDK BOM으로 변경
     implementation 'com.amazonaws:aws-java-sdk-s3'

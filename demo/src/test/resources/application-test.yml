@@ -1,0 +1,28 @@
+spring:
+  datasource:
+    # 운영용 데이터베이스 동일하게 사용
+    url: jdbc:mysql://travelonna.chm0a4kmgsm5.ap-northeast-2.rds.amazonaws.com:3306/travelonna?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    username: admin
+    password: ${db.password}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    
+  jpa:
+    database: mysql
+    database-platform: org.hibernate.dialect.MySQLDialect
+    hibernate:
+      ddl-auto: update  # 테스트용으로 필요한 테이블만 생성/업데이트
+    show-sql: false  # 테스트 로그 정리
+    properties:
+      hibernate:
+        format_sql: false
+        
+# 테스트용 로깅 설정
+logging:
+  level:
+    org.springframework.security: WARN
+    com.travelonna: INFO
+    org.hibernate.SQL: WARN
+
+  h2:
+    console:
+      enabled: true 

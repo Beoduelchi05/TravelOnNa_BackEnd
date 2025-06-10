@@ -25,6 +25,7 @@ import com.travelonna.demo.domain.user.entity.User;
 import com.travelonna.demo.domain.user.entity.UserAction.TargetType;
 import com.travelonna.demo.domain.user.repository.UserRepository;
 import com.travelonna.demo.domain.user.service.UserActionService;
+import com.travelonna.demo.domain.plan.service.MyMapService;
 import com.travelonna.demo.global.exception.ResourceNotFoundException;
 
 import lombok.RequiredArgsConstructor;
@@ -41,6 +42,7 @@ public class LogService {
     private final PlanRepository planRepository;
     private final PlaceRepository placeRepository;
     private final UserActionService userActionService;
+    private final MyMapService myMapService;
     
     private static final Logger logger = LoggerFactory.getLogger(LogService.class);
     
@@ -115,6 +117,14 @@ public class LogService {
                             .build();
                     savedLog.addImage(image);
                 }
+            }
+            
+            // MyMap 데이터 자동 생성
+            try {
+                myMapService.createMyMapFromLog(savedLog, user);
+            } catch (Exception e) {
+                logger.warn("MyMap 데이터 생성 실패: userId={}, logId={}, error={}", 
+                           user.getUserId(), savedLog.getLogId(), e.getMessage());
             }
             
             // UserAction 기록 - POST 액션 (각 장소별 Log마다)
@@ -522,6 +532,13 @@ public class LogService {
         // 기록 작성자 확인
         if (!log.getUser().getUserId().equals(userId)) {
             throw new IllegalArgumentException("User is not authorized to delete this log");
+        }
+        
+        // MyMap 데이터 먼저 삭제
+        try {
+            myMapService.deleteMyMapByLogId(logId);
+        } catch (Exception e) {
+            logger.warn("MyMap 데이터 삭제 실패: logId={}, error={}", logId, e.getMessage());
         }
         
         logRepository.delete(log);
