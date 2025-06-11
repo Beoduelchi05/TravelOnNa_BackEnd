@@ -37,6 +37,11 @@ public class LogResponseDto {
     private List<Integer> placeIds;  // 추가: 모든 연관된 장소 ID들
     private List<String> placeNames; // 수정: 모든 연관된 장소명들
     
+    // MapCode 관련 필드 추가
+    private Long mapCodeId;       // 지역 코드 ID
+    private String mapCodeCity;   // 지역 코드 도시
+    private String mapCodeDistrict; // 지역 코드 구/군
+    
     public static LogResponseDto fromEntity(Log log, boolean isLiked) {
         return LogResponseDto.builder()
                 .logId(log.getLogId())

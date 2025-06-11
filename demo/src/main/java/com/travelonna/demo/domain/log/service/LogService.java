@@ -19,8 +19,12 @@ import com.travelonna.demo.domain.log.repository.LogImageRepository;
 import com.travelonna.demo.domain.log.repository.LogRepository;
 import com.travelonna.demo.domain.plan.entity.Place;
 import com.travelonna.demo.domain.plan.entity.Plan;
+import com.travelonna.demo.domain.plan.entity.MapCode;
+import com.travelonna.demo.domain.plan.entity.MyMap;
 import com.travelonna.demo.domain.plan.repository.PlaceRepository;
 import com.travelonna.demo.domain.plan.repository.PlanRepository;
+import com.travelonna.demo.domain.plan.repository.MapCodeRepository;
+import com.travelonna.demo.domain.plan.repository.MyMapRepository;
 import com.travelonna.demo.domain.user.entity.User;
 import com.travelonna.demo.domain.user.entity.UserAction.TargetType;
 import com.travelonna.demo.domain.user.repository.UserRepository;
@@ -43,6 +47,8 @@ public class LogService {
     private final PlaceRepository placeRepository;
     private final UserActionService userActionService;
     private final MyMapService myMapService;
+    private final MyMapRepository myMapRepository;
+    private final MapCodeRepository mapCodeRepository;
     
     private static final Logger logger = LoggerFactory.getLogger(LogService.class);
     
@@ -291,7 +297,12 @@ public class LogService {
     // 일정별 기록 조회
     public List<LogResponseDto> getLogsByPlan(Integer planId, Integer userId) {
         List<Log> logs = logRepository.findByPlanPlanIdOrderByCreatedAtDesc(planId);
-        return convertToLogResponseDtoList(logs, userId);
+        List<LogResponseDto> result = convertToLogResponseDtoList(logs, userId);
+        
+        // 각 LogResponseDto에 mapcode 정보 추가
+        result.forEach(dto -> setMapCodeInfoToDto(dto, dto.getLogId()));
+        
+        return result;
     }
     
     // 공개 기록 목록 조회
@@ -371,7 +382,12 @@ public class LogService {
             logger.info("전체 Log 개수: {}", totalLogs);
         }
         
-        return convertToLogResponseDtoListForPlace(logs, userId, placeId);
+        List<LogResponseDto> result = convertToLogResponseDtoListForPlace(logs, userId, placeId);
+        
+        // 각 LogResponseDto에 mapcode 정보 추가
+        result.forEach(dto -> setMapCodeInfoToDto(dto, dto.getLogId()));
+        
+        return result;
     }
 
     // 장소별 기록 조회를 위한 별도 변환 메소드
@@ -682,5 +698,92 @@ public class LogService {
         }
         
         return result;
+    }
+    
+    /**
+     * LogResponseDto에 mapcode 정보를 설정하는 메소드
+     */
+    private void setMapCodeInfoToDto(LogResponseDto dto, Integer logId) {
+        try {
+            // MyMap에서 해당 로그의 mapcode 정보 조회
+            myMapRepository.findByLogLogId(logId)
+                    .ifPresentOrElse(
+                            myMap -> {
+                                MapCode mapCode = myMap.getMapCode();
+                                if (mapCode != null) {
+                                    dto.setMapCodeId(mapCode.getMapCodeId());
+                                    dto.setMapCodeCity(mapCode.getCity());
+                                    dto.setMapCodeDistrict(mapCode.getDistrict());
+                                }
+                            },
+                            () -> {
+                                // MyMap이 없는 경우 Plan의 location 정보로부터 mapcode 추출 시도
+                                setMapCodeFromPlanLocation(dto, logId);
+                            }
+                    );
+        } catch (Exception e) {
+            logger.warn("MapCode 정보 설정 실패: logId={}, error={}", logId, e.getMessage());
+        }
+    }
+    
+    /**
+     * Plan의 location 정보로부터 mapcode를 찾아서 설정하는 메소드
+     */
+    private void setMapCodeFromPlanLocation(LogResponseDto dto, Integer logId) {
+        try {
+            logRepository.findById(logId).ifPresent(log -> {
+                Plan plan = log.getPlan();
+                if (plan != null && plan.getLocation() != null) {
+                    String location = plan.getLocation();
+                    
+                    // location 문자열을 파싱해서 도시와 구/군 추출
+                    String[] locationParts = parseLocationString(location);
+                    String city = locationParts[0];
+                    String district = locationParts[1];
+                    
+                    // mapcode 조회
+                    if (district != null && !district.trim().isEmpty()) {
+                        mapCodeRepository.findByCityAndDistrict(city, district)
+                                .ifPresent(mapCode -> {
+                                    dto.setMapCodeId(mapCode.getMapCodeId());
+                                    dto.setMapCodeCity(mapCode.getCity());
+                                    dto.setMapCodeDistrict(mapCode.getDistrict());
+                                });
+                    } else {
+                        mapCodeRepository.findByCityOnly(city)
+                                .ifPresent(mapCode -> {
+                                    dto.setMapCodeId(mapCode.getMapCodeId());
+                                    dto.setMapCodeCity(mapCode.getCity());
+                                    dto.setMapCodeDistrict(mapCode.getDistrict());
+                                });
+                    }
+                }
+            });
+        } catch (Exception e) {
+            logger.warn("Plan location으로부터 MapCode 정보 설정 실패: logId={}, error={}", logId, e.getMessage());
+        }
+    }
+    
+    /**
+     * location 문자열을 파싱해서 도시와 구/군을 추출하는 메소드
+     * 예: "서울특별시 강남구" -> ["서울특별시", "강남구"]
+     */
+    private String[] parseLocationString(String location) {
+        if (location == null || location.trim().isEmpty()) {
+            return new String[]{null, null};
+        }
+        
+        location = location.trim();
+        
+        // 공백으로 분리
+        String[] parts = location.split("\\s+");
+        
+        if (parts.length >= 2) {
+            return new String[]{parts[0], parts[1]};
+        } else if (parts.length == 1) {
+            return new String[]{parts[0], null};
+        } else {
+            return new String[]{null, null};
+        }
     }
 } 
