@@ -2,6 +2,8 @@ package com.travelonna.demo.domain.recommendation.repository;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -32,7 +34,26 @@ public interface RecommendationRepository extends JpaRepository<Recommendation, 
         @Param("itemType") ItemType itemType);
     
     /**
-     * 사용자의 추천 목록을 점수 순으로 조회 (제한된 개수)
+     * 사용자의 추천 목록을 점수 순으로 조회 (페이지네이션 지원)
+     */
+    @Query("""
+        SELECT r.itemId as itemId, r.score as score,
+               l.logId as logId, l.user.userId as logUserId, l.plan.planId as planId,
+               l.comment as comment, l.createdAt as createdAt, l.isPublic as isPublic
+        FROM Recommendation r
+        JOIN Log l ON r.itemId = l.logId
+        WHERE r.user.userId = :userId 
+          AND r.itemType = :itemType
+          AND l.isPublic = true
+        ORDER BY r.score DESC
+        """)
+    Page<RecommendationProjection> findRecommendationsWithLogInfoPaginated(
+        @Param("userId") Integer userId, 
+        @Param("itemType") ItemType itemType,
+        Pageable pageable);
+    
+    /**
+     * 사용자의 추천 목록을 점수 순으로 조회 (제한된 개수) - 하위 호환성을 위해 유지
      */
     @Query("""
         SELECT r.itemId as itemId, r.score as score,

@@ -1,5 +1,8 @@
 package com.travelonna.demo.domain.recommendation.controller;
 
+import java.util.Map;
+
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,10 +26,10 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
-import java.util.Map;
 
 @Tag(name = "추천", description = "AI 기반 개인화 추천 API")
 @RestController
@@ -39,8 +42,66 @@ public class RecommendationController {
     private final AIRecommendationClient aiRecommendationClient;
     
     @Operation(
-        summary = "개인화 추천 목록 조회", 
+        summary = "개인화 추천 목록 조회 (페이지네이션)",
+        description = "사용자의 행동 데이터를 기반으로 생성된 개인화 추천 목록을 페이지네이션 방식으로 조회합니다.\n\n" +
+                     "**추천 알고리즘**: ALS(Alternating Least Squares) 협업 필터링과 인기도 기반 알고리즘을 결합한 하이브리드 방식\n\n" +
+                     "**데이터 소스**: user_actions 테이블의 사용자 행동 데이터 (POST, LIKE, COMMENT, VIEW)\n\n" +
+                     "**업데이트 주기**: 매일 새벽 2시 전체 배치, 6시간마다 증분 배치\n\n" +
+                     "**현재 지원 타입**: log (여행 기록 추천)\n\n" +
+                     "**페이지네이션**: page는 1부터 시작, size는 최대 50까지 지원"
+    )
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200", 
+            description = "추천 목록 조회 성공",
+            content = @Content(schema = @Schema(implementation = RecommendationResponseDto.class))
+        ),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "400", 
+            description = "잘못된 요청 (지원하지 않는 타입, 잘못된 페이지 번호 등)"
+        ),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "404", 
+            description = "사용자를 찾을 수 없음"
+        )
+    })
+    @GetMapping
+    public ResponseEntity<ApiResponse<RecommendationResponseDto>> getRecommendationsPaginated(
+            @Parameter(description = "사용자 ID", required = true, example = "123")
+            @RequestParam Integer userId,
+            
+            @Parameter(description = "추천 타입 (현재 'log'만 지원)", example = "log")
+            @RequestParam(defaultValue = "log") String type,
+            
+            @Parameter(description = "페이지 번호 (1부터 시작)", example = "1")
+            @RequestParam(defaultValue = "1") 
+            @Min(value = 1, message = "페이지 번호는 1 이상이어야 합니다") Integer page,
+            
+            @Parameter(description = "페이지 크기 (최대 50)", example = "20")
+            @RequestParam(defaultValue = "20") 
+            @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다")
+            @Max(value = 50, message = "페이지 크기는 50 이하여야 합니다") Integer size) {
+        
+        log.info("페이지네이션 추천 목록 API 호출: userId={}, type={}, page={}, size={}", 
+                userId, type, page, size);
+        
+        RecommendationResponseDto responseDto = recommendationService.getRecommendationsPaginated(
+                userId, type, page, size);
+        
+        String message = responseDto.getRecommendations().isEmpty() 
+            ? "추천 데이터가 없습니다. 더 많은 활동을 통해 개인화된 추천을 받아보세요!" 
+            : String.format("개인화 추천 목록을 성공적으로 조회했습니다 (페이지 %d/%d, %d건)", 
+                           responseDto.getPageInfo().getCurrentPage(),
+                           responseDto.getPageInfo().getTotalPages(),
+                           responseDto.getRecommendations().size());
+        
+        return ResponseEntity.ok(ApiResponse.success(message, responseDto));
+    }
+    
+    @Operation(
+        summary = "개인화 추천 목록 조회 (레거시)", 
         description = "사용자의 행동 데이터를 기반으로 생성된 개인화 추천 목록을 조회합니다.\n\n" +
+                     "**⚠️ 권장하지 않음**: 이 API는 하위 호환성을 위해 유지됩니다. 새로운 개발에서는 GET /api/v1/recommendations를 사용하세요.\n\n" +
                      "**추천 알고리즘**: ALS(Alternating Least Squares) 협업 필터링과 인기도 기반 알고리즘을 결합한 하이브리드 방식\n\n" +
                      "**데이터 소스**: user_actions 테이블의 사용자 행동 데이터 (POST, LIKE, COMMENT, VIEW)\n\n" +
                      "**업데이트 주기**: 매일 새벽 2시 전체 배치, 6시간마다 증분 배치\n\n" +
@@ -61,6 +122,35 @@ public class RecommendationController {
             description = "사용자를 찾을 수 없음"
         )
     })
+    @PostMapping("/legacy")
+    public ResponseEntity<ApiResponse<RecommendationResponseDto>> getRecommendationsLegacy(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                description = "추천 요청 정보",
+                content = @Content(schema = @Schema(implementation = RecommendationRequestDto.class))
+            )
+            @Valid @RequestBody RecommendationRequestDto requestDto) {
+        
+        log.info("레거시 추천 목록 API 호출: userId={}, type={}, limit={}", 
+                requestDto.getUser_id(), requestDto.getRec_type(), requestDto.getEffectiveSize());
+        
+        // 새로운 페이지네이션 메소드 사용 (첫 번째 페이지)
+        RecommendationResponseDto responseDto = recommendationService.getRecommendationsPaginated(
+                requestDto.getUser_id(), 
+                requestDto.getRec_type(), 
+                1, // 첫 번째 페이지
+                requestDto.getEffectiveSize());
+        
+        String message = responseDto.getRecommendations().isEmpty() 
+            ? "추천 데이터가 없습니다. 더 많은 활동을 통해 개인화된 추천을 받아보세요!" 
+            : String.format("개인화 추천 목록을 성공적으로 조회했습니다 (%d건)", responseDto.getRecommendations().size());
+        
+        return ResponseEntity.ok(ApiResponse.success(message, responseDto));
+    }
+    
+    @Operation(
+        summary = "개인화 추천 목록 조회 (POST 방식)",
+        description = "기존 POST 방식 API의 하위 호환성을 위해 유지됩니다. 새로운 개발에서는 GET 방식을 권장합니다."
+    )
     @PostMapping
     public ResponseEntity<ApiResponse<RecommendationResponseDto>> getRecommendations(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
@@ -69,17 +159,22 @@ public class RecommendationController {
             )
             @Valid @RequestBody RecommendationRequestDto requestDto) {
         
-        log.info("추천 목록 API 호출: userId={}, type={}, limit={}", 
-                requestDto.getUser_id(), requestDto.getRec_type(), requestDto.getRec_limit());
+        log.info("POST 추천 목록 API 호출: userId={}, type={}, page={}, size={}", 
+                requestDto.getUser_id(), requestDto.getRec_type(), requestDto.getPage(), requestDto.getEffectiveSize());
         
-        RecommendationResponseDto responseDto = recommendationService.getRecommendations(
+        // 새로운 페이지네이션 메소드 사용
+        RecommendationResponseDto responseDto = recommendationService.getRecommendationsPaginated(
                 requestDto.getUser_id(), 
                 requestDto.getRec_type(), 
-                requestDto.getRec_limit());
+                requestDto.getPage(),
+                requestDto.getEffectiveSize());
         
         String message = responseDto.getRecommendations().isEmpty() 
             ? "추천 데이터가 없습니다. 더 많은 활동을 통해 개인화된 추천을 받아보세요!" 
-            : String.format("개인화 추천 목록을 성공적으로 조회했습니다 (%d건)", responseDto.getRecommendations().size());
+            : String.format("개인화 추천 목록을 성공적으로 조회했습니다 (페이지 %d/%d, %d건)", 
+                           responseDto.getPageInfo().getCurrentPage(),
+                           responseDto.getPageInfo().getTotalPages(),
+                           responseDto.getRecommendations().size());
         
         return ResponseEntity.ok(ApiResponse.success(message, responseDto));
     }
@@ -142,7 +237,7 @@ public class RecommendationController {
         );
         
         return ResponseEntity.ok(ApiResponse.success(
-            String.format("콜드스타트 추천을 성공적으로 조회했습니다 (%d건)", responseDto.getLogs().size()),
+            "콜드스타트 추천을 성공적으로 조회했습니다",
             responseDto
         ));
     }

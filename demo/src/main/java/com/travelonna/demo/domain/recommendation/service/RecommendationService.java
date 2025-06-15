@@ -4,6 +4,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,6 +15,7 @@ import com.travelonna.demo.domain.log.repository.LogRepository;
 import com.travelonna.demo.domain.log.service.LogService;
 import com.travelonna.demo.domain.recommendation.dto.ColdStartRecommendationResponseDto;
 import com.travelonna.demo.domain.recommendation.dto.RecommendationResponseDto;
+import com.travelonna.demo.domain.recommendation.dto.RecommendationResponseDto.PageInfo;
 import com.travelonna.demo.domain.recommendation.dto.RecommendationResponseDto.RecommendationItemDto;
 import com.travelonna.demo.domain.recommendation.entity.Recommendation.ItemType;
 import com.travelonna.demo.domain.recommendation.repository.RecommendationProjection;
@@ -37,8 +41,11 @@ public class RecommendationService {
     private final LogService logService;
     private final AIRecommendationClient aiRecommendationClient;
     
-    public RecommendationResponseDto getRecommendations(Integer userId, String type, Integer limit) {
-        log.debug("추천 목록 조회 시작: userId={}, type={}, limit={}", userId, type, limit);
+    /**
+     * 페이지네이션을 지원하는 추천 목록 조회 (신규 메소드)
+     */
+    public RecommendationResponseDto getRecommendationsPaginated(Integer userId, String type, Integer page, Integer size) {
+        log.debug("페이지네이션 추천 목록 조회 시작: userId={}, type={}, page={}, size={}", userId, type, page, size);
         
         // 사용자 존재 확인
         User user = userRepository.findById(userId)
@@ -57,128 +64,77 @@ public class RecommendationService {
             throw new IllegalArgumentException("Currently only 'log' type is supported");
         }
         
-        // 1. 먼저 배치 데이터 확인 (recommendations 테이블)
-        List<RecommendationProjection> projections;
-        if (limit != null && limit > 0) {
-            projections = recommendationRepository.findRecommendationsWithLogInfoLimit(
-                userId, itemType, limit);
-        } else {
-            projections = recommendationRepository.findRecommendationsWithLogInfo(
-                userId, itemType);
-        }
+        // Pageable 객체 생성 (0 기반이므로 page-1)
+        Pageable pageable = PageRequest.of(page - 1, size);
         
-        // 배치 데이터가 있으면 사용 (빠른 경로)
-        if (!projections.isEmpty()) {
-            log.info("✅ 개인화 추천 사용: userId={}, 결과 수={}", userId, projections.size());
+        // 1. 먼저 배치 데이터 확인 (recommendations 테이블) - 페이지네이션
+        Page<RecommendationProjection> pagedProjections = 
+            recommendationRepository.findRecommendationsWithLogInfoPaginated(userId, itemType, pageable);
+        
+        // 배치 데이터가 있으면 사용 (페이지네이션 적용)
+        if (pagedProjections.hasContent()) {
+            log.info("✅ 개인화 추천 사용 (페이지네이션): userId={}, 페이지={}/{}, 결과 수={}", 
+                    userId, page, pagedProjections.getTotalPages(), pagedProjections.getContent().size());
             
-            List<RecommendationItemDto> recommendationItems = projections.stream()
+            List<RecommendationItemDto> recommendationItems = pagedProjections.getContent().stream()
                     .map(this::convertToRecommendationItemDto)
                     .collect(Collectors.toList());
             
-            // **하이브리드 로직**: 배치 데이터가 요청한 limit보다 적으면 추가로 채우기
-            int effectiveLimit = (limit != null && limit > 0) ? limit : 10;
-            int remaining = effectiveLimit - recommendationItems.size();
-            if (remaining > 0) {
-                log.info("🔄 배치 데이터 부족 ({}/{}개) - {}개 추가로 채우기", 
-                        recommendationItems.size(), effectiveLimit, remaining);
-                
-                // 이미 추천된 아이템 ID들을 제외 목록으로 만들기
-                Set<Integer> excludeIds = recommendationItems.stream()
-                        .map(RecommendationItemDto::getItemId)
-                        .collect(Collectors.toSet());
-                
-                // AI 서비스로 추가 추천 시도
-                try {
-                    AIRecommendationResponse aiResponse = aiRecommendationClient.getRecommendations(
-                            userId, type, remaining);
-                    
-                    if (aiResponse.getRecommendations() != null) {
-                        final Set<Integer> finalExcludeIds = excludeIds;
-                        List<RecommendationItemDto> additionalItems = aiResponse.getRecommendations().stream()
-                                .filter(aiItem -> !finalExcludeIds.contains(aiItem.getItemId())) // 중복 제거
-                                .map(aiItem -> convertAIItemToDto(aiItem, type))
-                                .limit(remaining) // 필요한 개수만
-                                .collect(Collectors.toList());
-                        
-                        recommendationItems.addAll(additionalItems);
-                        remaining -= additionalItems.size();
-                        
-                        log.info("✅ AI 추천 추가: {}개 (남은 개수: {}개)", additionalItems.size(), remaining);
-                    }
-                } catch (Exception e) {
-                    log.warn("⚠️ AI 추천 추가 실패: {}", e.getMessage());
-                }
-                
-                // 여전히 부족하면 콜드스타트로 채우기
-                if (remaining > 0) {
-                    log.info("🔄 여전히 부족 - 콜드스타트로 {}개 채우기", remaining);
-                    
-                    // 현재 추천된 아이템들 업데이트
-                    Set<Integer> finalExcludeIds = recommendationItems.stream()
-                            .map(RecommendationItemDto::getItemId)
-                            .collect(Collectors.toSet());
-                    
-                    List<com.travelonna.demo.domain.log.dto.LogResponseDto> coldStartLogs = 
-                        logService.getRandomPublicLogsWithPagination(userId, remaining, 0);
-                    
-                    List<RecommendationItemDto> coldStartItems = coldStartLogs.stream()
-                            .filter(logDto -> !finalExcludeIds.contains(logDto.getLogId())) // 중복 제거
-                            .map(logDto -> RecommendationItemDto.builder()
-                                    .itemId(logDto.getLogId())
-                                    .score(0.3f) // 콜드스타트는 낮은 점수
-                                    .logId(logDto.getLogId())
-                                    .userId(logDto.getUserId())
-                                    .planId(logDto.getPlan() != null ? logDto.getPlan().getPlanId() : null)
-                                    .comment(logDto.getComment())
-                                    .createdAt(logDto.getCreatedAt())
-                                    .isPublic(logDto.getIsPublic())
-                                    .build())
-                            .limit(remaining)
-                            .collect(Collectors.toList());
-                    
-                    recommendationItems.addAll(coldStartItems);
-                    
-                    log.info("✅ 콜드스타트 추가: {}개", coldStartItems.size());
-                }
-                
-                log.info("🎯 하이브리드 추천 완료: 총 {}개 (배치 {}개 + 추가 {}개)", 
-                        recommendationItems.size(), projections.size(), 
-                        recommendationItems.size() - projections.size());
-            }
+            // 페이지 정보 생성
+            PageInfo pageInfo = PageInfo.of(page, size, (int) pagedProjections.getTotalElements());
             
             return RecommendationResponseDto.builder()
                     .userId(userId)
                     .itemType(type.toLowerCase())
                     .recommendations(recommendationItems)
+                    .pageInfo(pageInfo)
                     .build();
         }
         
-        // 2. 배치 데이터가 없으면 AI 서비스 실시간 호출 시도
+        // 2. 배치 데이터가 없으면 AI 서비스 실시간 호출 시도 (전체 조회 후 페이지네이션 시뮬레이션)
         log.info("배치 데이터 없음, AI 서비스 실시간 호출: userId={}", userId);
         
-        int effectiveLimit = (limit != null && limit > 0) ? limit : 10;
-        AIRecommendationResponse aiResponse = aiRecommendationClient.getRecommendations(userId, type, effectiveLimit);
+        // AI 서비스에서 더 많은 데이터를 가져와서 페이지네이션 시뮬레이션
+        int maxAIResults = Math.max(50, page * size); // 최소 50개 또는 현재 페이지까지 필요한 만큼
+        AIRecommendationResponse aiResponse = aiRecommendationClient.getRecommendations(userId, type, maxAIResults);
         
-        // AI 서비스 응답이 충분하면 사용
         if (aiResponse.getRecommendations() != null && !aiResponse.getRecommendations().isEmpty()) {
-            log.info("✅ AI 실시간 추천 사용: userId={}, 결과 수={}", userId, aiResponse.getRecommendations().size());
+            log.info("✅ AI 실시간 추천 사용 (페이지네이션 시뮬레이션): userId={}, 전체 수={}", 
+                    userId, aiResponse.getRecommendations().size());
             
-            List<RecommendationItemDto> recommendationItems = aiResponse.getRecommendations().stream()
+            List<RecommendationItemDto> allItems = aiResponse.getRecommendations().stream()
                     .map(aiItem -> convertAIItemToDto(aiItem, type))
                     .collect(Collectors.toList());
             
+            // 수동 페이지네이션
+            int totalElements = allItems.size();
+            int offset = (page - 1) * size;
+            int endIndex = Math.min(offset + size, totalElements);
+            
+            List<RecommendationItemDto> pagedItems = offset < totalElements 
+                ? allItems.subList(offset, endIndex)
+                : List.of();
+            
+            // 페이지 정보 생성
+            PageInfo pageInfo = PageInfo.of(page, size, totalElements);
+            
             return RecommendationResponseDto.builder()
                     .userId(userId)
                     .itemType(type.toLowerCase())
-                    .recommendations(recommendationItems)
+                    .recommendations(pagedItems)
+                    .pageInfo(pageInfo)
                     .build();
         }
         
-        // 3. AI 서비스도 실패하면 콜드스타트 추천으로 자동 전환
-        log.info("⚠️ AI 추천 실패 - 콜드스타트 추천으로 자동 전환: userId={}", userId);
+        // 3. AI 서비스도 실패하면 콜드스타트 추천으로 자동 전환 (페이지네이션)
+        log.info("⚠️ AI 추천 실패 - 콜드스타트 추천으로 자동 전환: userId={}, page={}, size={}", userId, page, size);
         
+        int offset = (page - 1) * size;
         List<com.travelonna.demo.domain.log.dto.LogResponseDto> coldStartLogs = 
-            logService.getRandomPublicLogsWithPagination(userId, effectiveLimit, 0);
+            logService.getRandomPublicLogsWithPagination(userId, size, offset);
+        
+        // 전체 콜드스타트 추천 개수 추정 (실제로는 매우 많을 수 있음)
+        int estimatedTotal = Math.max(100, page * size); // 최소 100개로 추정
         
         // 콜드스타트 로그를 RecommendationItemDto 형식으로 변환
         List<RecommendationItemDto> recommendationItems = coldStartLogs.stream()
@@ -194,13 +150,32 @@ public class RecommendationService {
                         .build())
                 .collect(Collectors.toList());
         
-        log.info("✅ 콜드스타트 추천 제공: userId={}, 결과 수={}", userId, recommendationItems.size());
+        // 페이지 정보 생성 (다음 페이지가 있는지는 실제 조회 결과로 판단)
+        boolean hasNext = coldStartLogs.size() == size; // 요청한 만큼 조회되면 다음 페이지가 있을 가능성
+        int adjustedTotal = hasNext ? estimatedTotal : offset + coldStartLogs.size();
+        
+        PageInfo pageInfo = PageInfo.of(page, size, adjustedTotal);
+        
+        log.info("✅ 콜드스타트 추천 제공 (페이지네이션): userId={}, page={}, 결과 수={}", 
+                userId, page, recommendationItems.size());
         
         return RecommendationResponseDto.builder()
                 .userId(userId)
                 .itemType(type.toLowerCase())
                 .recommendations(recommendationItems)
+                .pageInfo(pageInfo)
                 .build();
+    }
+    
+    /**
+     * 기존 메소드 (하위 호환성을 위해 유지) - 내부적으로 새로운 페이지네이션 메소드 호출
+     */
+    public RecommendationResponseDto getRecommendations(Integer userId, String type, Integer limit) {
+        log.debug("기존 추천 목록 조회 (호환성): userId={}, type={}, limit={}", userId, type, limit);
+        
+        // 기존 limit 방식을 첫 번째 페이지로 변환
+        int size = limit != null && limit > 0 ? limit : 20;
+        return getRecommendationsPaginated(userId, type, 1, size);
     }
     
     private RecommendationItemDto convertToRecommendationItemDto(RecommendationProjection projection) {
