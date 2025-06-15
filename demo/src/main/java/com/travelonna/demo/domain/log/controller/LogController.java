@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.RestController;
 import com.travelonna.demo.domain.log.dto.LogRequestDto;
 import com.travelonna.demo.domain.log.dto.LogResponseDto;
 import com.travelonna.demo.domain.log.service.LogService;
-import com.travelonna.demo.domain.user.entity.User;
 import com.travelonna.demo.domain.user.repository.UserRepository;
 import com.travelonna.demo.global.common.ApiResponse;
 import com.travelonna.demo.global.security.jwt.JwtUserDetails;

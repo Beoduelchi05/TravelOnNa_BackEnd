@@ -1,12 +1,12 @@
 package com.travelonna.demo.domain.plan.service;
 
 import java.time.LocalDate;
-import java.util.List;
-import java.util.Set;
-import java.util.HashSet;
 import java.util.ArrayList;
-import java.util.stream.Collectors;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -220,26 +220,43 @@ public class PlanService {
      * 권한 검증이 포함된 일정 조회
      */
     public Plan getPlanWithPermissionCheck(Integer userId, Integer planId) {
-        // 먼저 사용자가 직접 만든 일정인지 확인
-        Optional<Plan> myPlan = planRepository.findByPlanIdAndUserId(planId, userId);
-        if (myPlan.isPresent()) {
-            return myPlan.get();
+        // 먼저 일정 자체가 존재하는지 확인
+        Optional<Plan> planOpt = planRepository.findById(planId);
+        if (!planOpt.isPresent()) {
+            throw new IllegalArgumentException("해당 일정을 찾을 수 없습니다: " + planId);
         }
         
-        // 그룹 멤버로 참여한 일정인지 확인
-        Optional<Plan> plan = planRepository.findById(planId);
-        if (plan.isPresent() && plan.get().getGroupId() != null) {
+        Plan plan = planOpt.get();
+        
+        // 1. 공개 일정인 경우 누구나 접근 가능
+        if (plan.getIsPublic() != null && plan.getIsPublic()) {
+            log.debug("공개 일정 접근 허용: planId={}, userId={}", planId, userId);
+            return plan;
+        }
+        
+        // 2. 사용자가 직접 만든 일정인지 확인
+        if (plan.getUserId().equals(userId)) {
+            log.debug("일정 소유자 접근 허용: planId={}, userId={}", planId, userId);
+            return plan;
+        }
+        
+        // 3. 그룹 멤버로 참여한 일정인지 확인
+        if (plan.getGroupId() != null) {
             // 그룹 ID가 있는 일정인 경우, 해당 그룹의 멤버인지 확인
             List<Plan> groupPlans = planRepository.findPlansWhereUserIsGroupMember(userId);
             boolean hasAccess = groupPlans.stream()
                     .anyMatch(p -> p.getPlanId().equals(planId));
             
             if (hasAccess) {
-                return plan.get();
+                log.debug("그룹 멤버 접근 허용: planId={}, userId={}, groupId={}", planId, userId, plan.getGroupId());
+                return plan;
             }
         }
         
-        throw new IllegalArgumentException("해당 일정을 찾을 수 없거나 권한이 없습니다: " + planId);
+        // 4. 모든 조건을 만족하지 않으면 권한 없음
+        log.warn("일정 접근 권한 없음: planId={}, userId={}, isPublic={}, planUserId={}, groupId={}", 
+                planId, userId, plan.getIsPublic(), plan.getUserId(), plan.getGroupId());
+        throw new IllegalArgumentException("해당 일정에 접근할 권한이 없습니다: " + planId);
     }
     
     // 기간 유효성 검사 공통 메소드
