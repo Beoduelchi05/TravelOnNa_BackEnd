@@ -15,30 +15,36 @@
 </thead>
 <tbody>
 <tr>
-<td><a href="#" target="_blank">김민</a></td>
-<td>BE Lead</td>
-<td>Spring Boot 백엔드 아키텍처 설계, OAuth2 인증, 여행 계획 API 개발</td>
+<td><a href="https://github.com/KIMMIN5" target="_blank">김민오</a></td>
+<td>BE, DevOps, AI/ML</td>
+<td>백엔드 아키텍처 설계, OAuth2 인증<br>
+AWS 인프라 구축, Docker 컨테이너화, CI/CD 파이프라인 구성<br>
+추천 시스템 개발, ALS 협업 필터링</td>
 <td>
   <img src="https://img.shields.io/badge/Spring_Boot-6db33f?style=for-the-badge&logo=springboot&logoColor=white" alt="Spring Boot">
   <img src="https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white" alt="MySQL">
-</td>
-</tr>
-<tr>
-<td><a href="#" target="_blank">개발자</a></td>
-<td>AI/ML</td>
-<td>추천 시스템 개발, ALS 협업 필터링, 사용자 행동 분석 모델링</td>
-<td>
-  <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python">
-  <img src="https://img.shields.io/badge/Machine_Learning-FF6F00?style=for-the-badge&logo=tensorflow&logoColor=white" alt="ML">
-</td>
-</tr>
-<tr>
-<td><a href="#" target="_blank">개발자</a></td>
-<td>DevOps</td>
-<td>AWS 인프라 구축, Docker 컨테이너화, CI/CD 파이프라인 구성</td>
-<td>
   <img src="https://img.shields.io/badge/AWS-232F3E?style=for-the-badge&logo=amazonaws&logoColor=white" alt="AWS">
   <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
+  <img src="https://img.shields.io/badge/Jenkins-D24939?style=for-the-badge&logo=jenkins&logoColor=white" alt="Jenkins">
+  <img src="https://img.shields.io/badge/Ansible-EE0000?style=for-the-badge&logo=ansible&logoColor=white" alt="Ansible">
+  <img src="https://img.shields.io/badge/Kubernetes-326CE5?style=for-the-badge&logo=kubernetes&logoColor=white" alt="Kubernetes">
+  <img src="https://img.shields.io/badge/PyTorch-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white" alt="PyTorch">
+</td>
+</tr>
+<tr>
+<td><a href="https://github.com/ehrbs" target="_blank">윤도균</a></td>
+<td>BE</td>
+<td>프로필, 일정, 나만의지도</td>
+<td>
+  <img src="https://img.shields.io/badge/Spring_Boot-6db33f?style=for-the-badge&logo=springboot&logoColor=white" alt="Spring Boot">
+</td>
+</tr>
+<tr>
+<td><a href="https://github.com/JungMin-E" target="_blank">이정민</a></td>
+<td>BE</td>
+<td>그룹, 기록</td>
+<td>
+  <img src="https://img.shields.io/badge/Spring_Boot-6db33f?style=for-the-badge&logo=springboot&logoColor=white" alt="Spring Boot">
 </td>
 </tr>
 </tbody>
@@ -64,7 +70,6 @@
 ## 2. 소셜 네트워킹 기능
 - **팔로우 시스템**: 사용자 간 팔로우/언팔로우
 - **상호작용**: 좋아요, 댓글/대댓글 시스템
-- **실시간 알림**: WebSocket 기반 실시간 상호작용
 - **프라이버시**: 공개/비공개 설정
 
 ## 3. 여행 계획 및 기록 관리
@@ -84,20 +89,19 @@
 
 ## 아키텍처 설계 원칙
 
-### 1. 마이크로서비스 지향 설계
-- **Domain-Driven Design**: 사용자, 여행계획, 기록, 추천 등 도메인별 모듈 분리
-- **API Gateway**: Spring Boot가 중앙 게이트웨이 역할 수행
-- **Service Isolation**: 각 도메인 서비스 독립적 운영
+### 1. 도메인 중심 설계 (Domain-Driven Design)
+- **백엔드를 Auth, User, Follow, Plan, Group, Log, Search, Recommend 도메인으로 분리**
+- **모듈 간 통신은 API Layer를 통해서만 허용**
 
-### 2. AI/ML 파이프라인 통합
-- **추천 엔진**: Python 기반 ML 서비스와 Spring Boot 연동
-- **배치 처리**: 스케줄링 기반 추천 모델 학습 및 업데이트
-- **Real-time Inference**: 실시간 추천 결과 제공
+### 2. 마이크로서비스 아키텍처
+- **Main Server ↔ AI/ML Server 독립 운영**
+- **Docker + Kubernetes 기반 컨테이너 오케스트레이션**
+- **서비스별 독립적인 확장 및 배포**
 
-### 3. 확장 가능한 인프라
-- **AWS 기반**: EC2, RDS, S3 등 클라우드 네이티브 구성
-- **Docker 컨테이너화**: 환경 독립성 및 배포 효율성
-- **Load Balancing**: ALB를 통한 트래픽 분산
+### 3. CI/CD 자동화
+- **GitHub → Jenkins → Docker Hub → Kubernetes 파이프라인**
+- **멀티 아키텍처(amd64/arm64) Docker 이미지 빌드**
+- **Ansible + kubectl을 통한 무중단 Rolling Update 배포**
 
 # Tech Stack
 
@@ -114,7 +118,6 @@
 [![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white)]()
 [![AWS RDS](https://img.shields.io/badge/AWS_RDS-FF9900?style=for-the-badge&logo=amazon-rds&logoColor=white)]()
 [![AWS S3](https://img.shields.io/badge/AWS_S3-569A31?style=for-the-badge&logo=amazon-s3&logoColor=white)]()
-[![H2](https://img.shields.io/badge/H2_Database-0078D4?style=for-the-badge&logo=h2&logoColor=white)]()
 
 **Authentication & Security**
 
@@ -122,31 +125,18 @@
 [![JWT](https://img.shields.io/badge/JWT-000000?style=for-the-badge&logo=jsonwebtokens&logoColor=white)]()
 [![Google API](https://img.shields.io/badge/Google_API-4285F4?style=for-the-badge&logo=google&logoColor=white)]()
 
-**AI/ML & Recommendation**
-
-[![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)]()
-[![Scikit Learn](https://img.shields.io/badge/Scikit_Learn-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white)]()
-[![Pandas](https://img.shields.io/badge/Pandas-150458?style=for-the-badge&logo=pandas&logoColor=white)]()
-[![NumPy](https://img.shields.io/badge/NumPy-013243?style=for-the-badge&logo=numpy&logoColor=white)]()
-
 **DevOps & Infrastructure**
 
 [![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)]()
-[![AWS EC2](https://img.shields.io/badge/AWS_EC2-FF9900?style=for-the-badge&logo=amazon-ec2&logoColor=white)]()
-[![Gradle](https://img.shields.io/badge/Gradle-02303a?style=for-the-badge&logo=gradle&logoColor=white)]()
-[![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white)]()
+[![Jenkins](https://img.shields.io/badge/Jenkins-D24939?style=for-the-badge&logo=jenkins&logoColor=white)]()
+[![Kubernetes](https://img.shields.io/badge/Kubernetes-326CE5?style=for-the-badge&logo=kubernetes&logoColor=white)]()
+[![Ansible](https://img.shields.io/badge/Ansible-EE0000?style=for-the-badge&logo=ansible&logoColor=white)]()
 
 **Documentation & Testing**
 
 [![Swagger](https://img.shields.io/badge/Swagger-85ea2d?style=for-the-badge&logo=swagger&logoColor=black)]()
 [![JUnit](https://img.shields.io/badge/JUnit-25A162?style=for-the-badge&logo=java&logoColor=white)]()
 [![Spring Boot Test](https://img.shields.io/badge/Spring_Boot_Test-6db33f?style=for-the-badge&logo=spring&logoColor=white)]()
-
-**Monitoring & Utilities**
-
-[![Spring Actuator](https://img.shields.io/badge/Spring_Actuator-6db33f?style=for-the-badge&logo=spring&logoColor=white)]()
-[![Lombok](https://img.shields.io/badge/Lombok-BC4521?style=for-the-badge&logo=lombok&logoColor=white)]()
-[![Thumbnailator](https://img.shields.io/badge/Thumbnailator-4B8BBE?style=for-the-badge&logo=java&logoColor=white)]()
 
 # 로컬 개발 환경 설정
 
@@ -224,73 +214,6 @@ docker run -p 8080:8080 -v /path/to/config:/config travelonna-backend
 애플리케이션 실행 후 다음 URL에서 API 문서를 확인할 수 있습니다:
 
 - **Swagger UI**: http://localhost:8080/swagger-ui.html
-- **OpenAPI JSON**: http://localhost:8080/v3/api-docs
-- **Health Check**: http://localhost:8080/actuator/health
-
-# 프로젝트 구조
-
-```
-src/main/java/com/travelonna/demo/
-├── TravelonnaApplication.java          # 애플리케이션 진입점
-├── global/                             # 공통 설정 및 유틸리티
-│   ├── config/                         # 설정 클래스들
-│   │   ├── SecurityConfig.java         # Spring Security 설정
-│   │   ├── JwtConfig.java              # JWT 설정
-│   │   ├── SwaggerConfig.java          # API 문서 설정
-│   │   └── WebSocketConfig.java        # WebSocket 설정
-│   ├── exception/                      # 예외 처리
-│   │   ├── GlobalExceptionHandler.java # 전역 예외 핸들러
-│   │   └── CustomExceptions.java       # 커스텀 예외 클래스들
-│   └── utils/                          # 유틸리티 클래스들
-│       ├── JwtUtil.java                # JWT 유틸리티
-│       └── FileUtil.java               # 파일 처리 유틸리티
-└── domain/                             # 도메인별 기능 구현
-    ├── auth/                           # 인증 관련 기능
-    │   ├── controller/                 # 인증 컨트롤러
-    │   ├── service/                    # 인증 서비스
-    │   ├── repository/                 # 인증 리포지토리
-    │   └── dto/                        # 인증 DTO
-    ├── user/                           # 사용자 관련 기능
-    │   ├── controller/                 # 사용자 컨트롤러
-    │   ├── service/                    # 사용자 서비스
-    │   ├── repository/                 # 사용자 리포지토리
-    │   ├── entity/                     # 사용자 엔티티
-    │   └── dto/                        # 사용자 DTO
-    ├── plan/                           # 여행 계획 관련 기능
-    │   ├── controller/                 # 계획 컨트롤러
-    │   ├── service/                    # 계획 서비스
-    │   ├── repository/                 # 계획 리포지토리
-    │   ├── entity/                     # 계획 엔티티
-    │   └── dto/                        # 계획 DTO
-    ├── log/                            # 여행 기록 관련 기능
-    │   ├── controller/                 # 기록 컨트롤러
-    │   ├── service/                    # 기록 서비스
-    │   ├── repository/                 # 기록 리포지토리
-    │   ├── entity/                     # 기록 엔티티
-    │   └── dto/                        # 기록 DTO
-    ├── follow/                         # 팔로우 관련 기능
-    │   ├── controller/                 # 팔로우 컨트롤러
-    │   ├── service/                    # 팔로우 서비스
-    │   ├── repository/                 # 팔로우 리포지토리
-    │   ├── entity/                     # 팔로우 엔티티
-    │   └── dto/                        # 팔로우 DTO
-    ├── group/                          # 그룹 관련 기능
-    │   ├── controller/                 # 그룹 컨트롤러
-    │   ├── service/                    # 그룹 서비스
-    │   ├── repository/                 # 그룹 리포지토리
-    │   ├── entity/                     # 그룹 엔티티
-    │   └── dto/                        # 그룹 DTO
-    ├── search/                         # 검색 관련 기능
-    │   ├── controller/                 # 검색 컨트롤러
-    │   ├── service/                    # 검색 서비스
-    │   └── dto/                        # 검색 DTO
-    └── recommendation/                 # AI 추천 관련 기능
-        ├── controller/                 # 추천 컨트롤러
-        ├── service/                    # 추천 서비스
-        ├── repository/                 # 추천 리포지토리
-        ├── entity/                     # 추천 엔티티
-        └── dto/                        # 추천 DTO
-```
 
 # 배포 및 운영
 
@@ -310,167 +233,15 @@ src/main/java/com/travelonna/demo/
 - **CloudWatch**: 로그 및 메트릭 수집
 - **Spring Actuator**: 헬스 체크 및 메트릭
 
-## Docker 배포
-
-### Dockerfile
-```dockerfile
-FROM openjdk:17-jdk
-ARG JAR_FILE=demo/build/libs/demo-0.0.1-SNAPSHOT.jar
-COPY ${JAR_FILE} app.jar
-ENTRYPOINT ["java", "-Dspring.profiles.active=docker", "-Dspring.config.additional-location=optional:file:/config/", "-jar", "app.jar"]
-```
-
-### docker-compose.yml
-```yaml
-version: '3.8'
-services:
-  app:
-    build: .
-    ports:
-      - "8080:8080"
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker
-    volumes:
-      - ./config:/config
-    depends_on:
-      - mysql
-      
-  mysql:
-    image: mysql:8.0
-    environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: travelonna
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-
-volumes:
-  mysql_data:
-```
-
-# AI 추천 시스템
-
-## 추천 알고리즘
-- **ALS (Alternating Least Squares)** 협업 필터링
-- **하이브리드 모델**: 협업 필터링 + 인기도 기반
-- **가중치 시스템**: POST(5.0) > LIKE(4.0) > COMMENT(3.0) > VIEW(1.0)
-
-## 배치 처리 스케줄
-- **전체 배치**: 매일 새벽 2:00 AM (전체 모델 재학습)
-- **증분 배치**: 6시간마다 (신규 데이터만 처리)
-
-## 성능 최적화
-- **Sparse Matrix**: 메모리 사용량 90% 절감
-- **BLAS 라이브러리**: 행렬 연산 속도 향상
-- **병렬 처리**: 멀티프로세싱 활용
-
-# 테스트
-
-```bash
-# 모든 테스트 실행
-./gradlew test
-
-# 특정 클래스 테스트
-./gradlew test --tests UserServiceTest
-
-# 테스트 커버리지 리포트 생성
-./gradlew jacocoTestReport
-```
-
-# 모니터링
-
-## Spring Actuator 엔드포인트
-
-```bash
-# 애플리케이션 상태 확인
-curl http://localhost:8080/actuator/health
-
-# 메트릭 조회  
-curl http://localhost:8080/actuator/metrics
-
-# 데이터베이스 연결 상태
-curl http://localhost:8080/actuator/health/db
-```
-
-## 주요 성능 지표
-
-| 메트릭 | 목표값 | 현재값 |
-|--------|--------|--------|
-| **API 응답시간** | < 200ms | 150ms |
-| **데이터베이스 연결** | > 95% | 99.2% |
-| **메모리 사용률** | < 80% | 65% |
-| **추천 정확도** | > 75% | 78.5% |
-
-# 향후 확장 계획
-
-## 1. 기능 확장
-- [ ] **실시간 채팅**: WebSocket 기반 그룹 채팅
-- [ ] **지도 통합**: Kakao Map API 연동
-- [ ] **날씨 정보**: OpenWeatherMap API 연동
-- [ ] **번역 서비스**: Google Translate API 연동
-
-## 2. 성능 최적화
-- [ ] **Redis 캐싱**: 추천 결과 및 세션 캐싱
-- [ ] **CDN 도입**: 이미지 및 정적 파일 최적화
-- [ ] **데이터베이스 샤딩**: 대용량 사용자 지원
-- [ ] **읽기 전용 복제본**: 읽기 성능 향상
-
-## 3. AI/ML 고도화
-- [ ] **딥러닝 모델**: Transformer 기반 추천
-- [ ] **실시간 추천**: 온라인 학습 모델
-- [ ] **멀티모달**: 텍스트 + 이미지 분석
-- [ ] **개인화 강화**: 컨텍스트 인식 추천
-
-## 4. 운영 개선
-- [ ] **CI/CD 파이프라인**: Jenkins/GitHub Actions
-- [ ] **모니터링 강화**: Prometheus + Grafana
-- [ ] **로그 중앙화**: ELK Stack 도입
-- [ ] **A/B 테스팅**: 기능 실험 플랫폼
-
-# 기여 가이드
-
-## 개발 환경 설정
-
-1. **Fork** 저장소를 자신의 계정으로 복사
-2. **Clone** 복사된 저장소를 로컬에 다운로드
-3. **Branch** 기능별 브랜치 생성 (`feature/기능명`)
-4. **Commit** 의미 있는 커밋 메시지 작성
-5. **Push** 변경사항을 원격 저장소에 업로드
-6. **Pull Request** 원본 저장소로 병합 요청
-
-## 코딩 컨벤션
-
-### 커밋 메시지 규칙
-```
-feat: 새로운 기능 추가
-fix: 버그 수정
-docs: 문서 수정
-style: 코드 포매팅, 세미콜론 누락 등
-refactor: 코드 리팩토링
-test: 테스트 코드 추가
-chore: 빌드 업무 수정, 패키지 매니저 설정 등
-
-예시:
-feat: 사용자 프로필 수정 API 추가
-fix: JWT 토큰 만료 시 처리 로직 수정
-docs: API 문서 업데이트
-```
-
-# 라이선스
-
-이 프로젝트는 **MIT License** 하에 배포됩니다. 자세한 내용은 [LICENSE](LICENSE) 파일을 참조하세요.
-
 # 문의 및 지원
 
 ## 📧 Contact
-- **이메일**: kimmin5@example.com
-- **GitHub Issues**: [이슈 등록](https://github.com/KIMMIN5/TravelOnNa_BackEnd/issues)
-- **Wiki**: [프로젝트 위키](https://github.com/KIMMIN5/TravelOnNa_BackEnd/wiki)
+- **이메일**: beoduelchi05@gmail.com
+- **GitHub Issues**: [이슈 등록](https://github.com/Beoduelchi05/TravelOnNa_BackEnd/issues)
 
 ## 🤝 Support
 프로젝트에 대한 질문이나 제안사항이 있으시면 언제든지 연락해 주세요!
 
 ---
 
-**Built with ❤️ by TravelOnNa Team**
+**Built with ❤️ by Beoduelchi Team**
