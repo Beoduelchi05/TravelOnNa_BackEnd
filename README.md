@@ -80,7 +80,7 @@
 
 # 시스템 아키텍처
 
-<img src="architecture.png">
+<img src="/images/architecture.png">
 
 ## 아키텍처 설계 원칙
 
