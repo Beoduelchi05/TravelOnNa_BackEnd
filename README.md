@@ -80,7 +80,7 @@
 
 # 시스템 아키텍처
 
-<img src="./docs/images/architecture.png">
+<img src="architecture.png">
 
 ## 아키텍처 설계 원칙
 
@@ -98,23 +98,6 @@
 - **AWS 기반**: EC2, RDS, S3 등 클라우드 네이티브 구성
 - **Docker 컨테이너화**: 환경 독립성 및 배포 효율성
 - **Load Balancing**: ALB를 통한 트래픽 분산
-
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Frontend      │    │   Spring Boot   │    │   Python ML     │
-│   (React/Vue)   │◄──►│   Backend       │◄──►│   Service       │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-                                │                        │
-                       ┌─────────────────┐    ┌─────────────────┐
-                       │   MySQL RDS     │    │   Redis Cache   │
-                       │   (Main DB)     │    │   (Session)     │
-                       └─────────────────┘    └─────────────────┘
-                                │
-                       ┌─────────────────┐
-                       │   AWS S3        │
-                       │   (File Storage)│
-                       └─────────────────┘
-```
 
 # Tech Stack
 
