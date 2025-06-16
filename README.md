@@ -1,6 +1,6 @@
 # <a href="#" target="_blank">여행ON나 (TravelOnNa)</a>: AI 기반 소셜 관광 플랫폼 백엔드
 
-![TravelOnNa Banner](./docs/images/banner.jpg)
+![TravelOnNa Banner](/images/여행ON나_로고.png)
 
 ## Team Member
 
