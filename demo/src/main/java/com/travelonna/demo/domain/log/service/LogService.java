@@ -78,8 +78,12 @@ public class LogService {
             throw new IllegalArgumentException("Comment is required");
         }
         
-        // placeId가 제공된 경우, 해당 장소만 처리
-        if (requestDto.getPlaceId() != null) {
+        // placeId 처리 로직 디버깅
+        logger.debug("placeId 처리: placeId={}", requestDto.getPlaceId());
+        
+        // placeId가 제공되고 유효한 경우, 해당 장소만 처리
+        if (requestDto.getPlaceId() != null && requestDto.getPlaceId() > 0) {
+            logger.debug("특정 장소에 대한 기록 생성: placeId={}", requestDto.getPlaceId());
             Place place = placeRepository.findByPlaceIdAndPlan_PlanId(requestDto.getPlaceId(), plan.getPlanId())
                     .orElseThrow(() -> {
                         logger.error("장소를 찾을 수 없음: placeId={}, planId={}", requestDto.getPlaceId(), plan.getPlanId());
@@ -134,15 +138,19 @@ public class LogService {
             return LogResponseDto.fromEntity(savedLog, false);
         }
         
-        // placeId가 없는 경우, 해당 planId의 모든 place 조회
+        // placeId가 없거나 유효하지 않은 경우, 해당 planId의 모든 place 조회
+        logger.debug("전체 장소에 대한 기록 생성 또는 장소 없는 기록 생성: placeId={}", requestDto.getPlaceId());
         List<Place> places = placeRepository.findByPlanIdOrderByOrder(plan.getPlanId());
+        logger.debug("일정에 등록된 장소 수: {}", places.size());
         
         if (places.isEmpty()) {
             // 일정에 등록된 장소가 없는 경우 일반적인 방식으로 한 개의 Log 생성
+            logger.debug("장소가 없는 일정이므로 단일 기록 생성");
             return createSingleLog(user, plan, requestDto);
         }
         
         // 각 place마다 Log 생성
+        logger.debug("각 장소마다 기록 생성 시작");
         List<Log> createdLogs = new ArrayList<>();
         for (Place place : places) {
             Log logEntity = Log.builder()
@@ -191,6 +199,8 @@ public class LogService {
     
     // 단일 Log 생성 메소드 (장소가 없는 경우 사용)
     private LogResponseDto createSingleLog(User user, Plan plan, LogRequestDto requestDto) {
+        logger.debug("단일 Log 생성 시작: userId={}, planId={}", user.getUserId(), plan.getPlanId());
+        
         Log logEntity = Log.builder()
                 .user(user)
                 .plan(plan)
@@ -204,7 +214,7 @@ public class LogService {
         }
         
         Log savedLog = logRepository.save(logEntity);
-        logger.debug("여행 기록 저장 성공: logId={}", savedLog.getLogId());
+        logger.debug("단일 여행 기록 저장 성공: logId={}", savedLog.getLogId());
         
         // 이미지가 제공된 경우에만 처리 (선택 사항)
         if (requestDto.getImageUrls() != null && !requestDto.getImageUrls().isEmpty()) {

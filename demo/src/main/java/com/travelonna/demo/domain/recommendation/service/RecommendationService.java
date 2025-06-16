@@ -91,78 +91,43 @@ public class RecommendationService {
                     .build();
         }
         
-        // 2. 배치 데이터가 없으면 AI 서비스 실시간 호출 시도 (전체 조회 후 페이지네이션 시뮬레이션)
+        // 2. 배치 데이터가 없으면 AI 서비스 실시간 호출 (AI 서비스가 하이브리드 로직 처리)
         log.info("배치 데이터 없음, AI 서비스 실시간 호출: userId={}", userId);
         
-        // AI 서비스에서 더 많은 데이터를 가져와서 페이지네이션 시뮬레이션
-        int maxAIResults = Math.max(50, page * size); // 최소 50개 또는 현재 페이지까지 필요한 만큼
-        AIRecommendationResponse aiResponse = aiRecommendationClient.getRecommendations(userId, type, maxAIResults);
+        // AI 서비스에 정확한 요청 개수 전달 (AI 서비스가 부족한 부분을 자동으로 채움)
+        int requestedSize = size; // 페이지 크기만큼 정확히 요청
+        AIRecommendationResponse aiResponse = aiRecommendationClient.getRecommendations(userId, type, requestedSize);
         
         if (aiResponse.getRecommendations() != null && !aiResponse.getRecommendations().isEmpty()) {
-            log.info("✅ AI 실시간 추천 사용 (페이지네이션 시뮬레이션): userId={}, 전체 수={}", 
-                    userId, aiResponse.getRecommendations().size());
+            log.info("✅ AI 실시간 추천 사용: userId={}, 요청={}, 응답={}", 
+                    userId, requestedSize, aiResponse.getRecommendations().size());
             
             List<RecommendationItemDto> allItems = aiResponse.getRecommendations().stream()
                     .map(aiItem -> convertAIItemToDto(aiItem, type))
                     .collect(Collectors.toList());
             
-            // 수동 페이지네이션
-            int totalElements = allItems.size();
-            int offset = (page - 1) * size;
-            int endIndex = Math.min(offset + size, totalElements);
-            
-            List<RecommendationItemDto> pagedItems = offset < totalElements 
-                ? allItems.subList(offset, endIndex)
-                : List.of();
-            
-            // 페이지 정보 생성
-            PageInfo pageInfo = PageInfo.of(page, size, totalElements);
+            // AI 서비스가 이미 정확한 개수를 보장하므로 페이지네이션 시뮬레이션 불필요
+            // 단순히 현재 페이지 정보만 생성
+            PageInfo pageInfo = PageInfo.of(page, size, allItems.size());
             
             return RecommendationResponseDto.builder()
                     .userId(userId)
                     .itemType(type.toLowerCase())
-                    .recommendations(pagedItems)
+                    .recommendations(allItems)
                     .pageInfo(pageInfo)
                     .build();
         }
         
-        // 3. AI 서비스도 실패하면 콜드스타트 추천으로 자동 전환 (페이지네이션)
-        log.info("⚠️ AI 추천 실패 - 콜드스타트 추천으로 자동 전환: userId={}, page={}, size={}", userId, page, size);
+        // 3. AI 서비스 호출 실패 시 빈 결과 반환 (AI 서비스가 모든 fallback 처리)
+        log.warn("⚠️ AI 추천 서비스 호출 실패: userId={}, page={}, size={}", userId, page, size);
         
-        int offset = (page - 1) * size;
-        List<com.travelonna.demo.domain.log.dto.LogResponseDto> coldStartLogs = 
-            logService.getRandomPublicLogsWithPagination(userId, size, offset);
-        
-        // 전체 콜드스타트 추천 개수 추정 (실제로는 매우 많을 수 있음)
-        int estimatedTotal = Math.max(100, page * size); // 최소 100개로 추정
-        
-        // 콜드스타트 로그를 RecommendationItemDto 형식으로 변환
-        List<RecommendationItemDto> recommendationItems = coldStartLogs.stream()
-                .map(logDto -> RecommendationItemDto.builder()
-                        .itemId(logDto.getLogId())
-                        .score(0.5f) // 콜드스타트는 기본 점수
-                        .logId(logDto.getLogId())
-                        .userId(logDto.getUserId())
-                        .planId(logDto.getPlan() != null ? logDto.getPlan().getPlanId() : null)
-                        .comment(logDto.getComment())
-                        .createdAt(logDto.getCreatedAt())
-                        .isPublic(logDto.getIsPublic())
-                        .build())
-                .collect(Collectors.toList());
-        
-        // 페이지 정보 생성 (다음 페이지가 있는지는 실제 조회 결과로 판단)
-        boolean hasNext = coldStartLogs.size() == size; // 요청한 만큼 조회되면 다음 페이지가 있을 가능성
-        int adjustedTotal = hasNext ? estimatedTotal : offset + coldStartLogs.size();
-        
-        PageInfo pageInfo = PageInfo.of(page, size, adjustedTotal);
-        
-        log.info("✅ 콜드스타트 추천 제공 (페이지네이션): userId={}, page={}, 결과 수={}", 
-                userId, page, recommendationItems.size());
+        // 빈 페이지 정보 생성
+        PageInfo pageInfo = PageInfo.of(page, size, 0);
         
         return RecommendationResponseDto.builder()
                 .userId(userId)
                 .itemType(type.toLowerCase())
-                .recommendations(recommendationItems)
+                .recommendations(List.of())
                 .pageInfo(pageInfo)
                 .build();
     }
