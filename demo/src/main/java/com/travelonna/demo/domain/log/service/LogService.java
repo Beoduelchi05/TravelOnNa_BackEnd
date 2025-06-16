@@ -25,6 +25,7 @@ import com.travelonna.demo.domain.plan.repository.MyMapRepository;
 import com.travelonna.demo.domain.plan.repository.PlaceRepository;
 import com.travelonna.demo.domain.plan.repository.PlanRepository;
 import com.travelonna.demo.domain.plan.service.MyMapService;
+import com.travelonna.demo.domain.plan.service.PlanService;
 import com.travelonna.demo.domain.user.entity.User;
 import com.travelonna.demo.domain.user.entity.UserAction.TargetType;
 import com.travelonna.demo.domain.user.repository.UserRepository;
@@ -48,6 +49,7 @@ public class LogService {
     private final MyMapService myMapService;
     private final MyMapRepository myMapRepository;
     private final MapCodeRepository mapCodeRepository;
+    private final PlanService planService;
     
     private static final Logger logger = LoggerFactory.getLogger(LogService.class);
     
@@ -65,20 +67,10 @@ public class LogService {
                 });
         logger.debug("사용자 조회 성공: user={}", user.getUserId());
         
-        // 일정 검증
-        logger.debug("일정 조회 시도: planId={}", requestDto.getPlanId());
-        Plan plan = planRepository.findById(requestDto.getPlanId())
-                .orElseThrow(() -> {
-                    logger.error("일정을 찾을 수 없음: planId={}", requestDto.getPlanId());
-                    return new ResourceNotFoundException("Plan not found: ID=" + requestDto.getPlanId());
-                });
-        logger.debug("일정 조회 성공: plan={}, planUserId={}", plan.getPlanId(), plan.getUserId());
-        
-        // 사용자가 해당 일정의 소유자인지 확인
-        if (!plan.getUserId().equals(userId)) {
-            logger.error("사용자가 일정의 소유자가 아님: userId={}, planUserId={}", userId, plan.getUserId());
-            throw new IllegalArgumentException("User is not the owner of the plan");
-        }
+        // 일정 검증 및 권한 확인 (그룹 멤버 포함)
+        logger.debug("일정 조회 및 권한 확인 시도: planId={}", requestDto.getPlanId());
+        Plan plan = planService.getPlanWithPermissionCheck(userId, requestDto.getPlanId());
+        logger.debug("일정 조회 및 권한 확인 성공: plan={}, planUserId={}", plan.getPlanId(), plan.getUserId());
         
         // comment가 null이거나 비어있는지 확인 (@Valid로 검증되지만 추가 검증)
         if (requestDto.getComment() == null || requestDto.getComment().trim().isEmpty()) {
@@ -481,14 +473,8 @@ public class LogService {
         
         // 일정 수정이 필요한 경우
         if (requestDto.getPlanId() != null && !requestDto.getPlanId().equals(log.getPlan().getPlanId())) {
-            Plan plan = planRepository.findById(requestDto.getPlanId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Plan not found"));
-            
-            // 사용자가 해당 일정의 소유자인지 확인
-            if (!plan.getUserId().equals(userId)) {
-                throw new IllegalArgumentException("User is not the owner of the plan");
-            }
-            
+            // 새로운 일정에 대한 권한 확인 (그룹 멤버 포함)
+            Plan plan = planService.getPlanWithPermissionCheck(userId, requestDto.getPlanId());
             log.setPlan(plan);
         }
         
