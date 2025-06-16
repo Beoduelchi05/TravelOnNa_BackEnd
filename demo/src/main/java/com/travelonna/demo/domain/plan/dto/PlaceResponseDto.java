@@ -137,8 +137,8 @@ public class PlaceResponseDto {
                 LocalDate startDate = (LocalDate) startDateField.get(plan);
                 
                 if (startDate != null) {
-                    // 여행 일차 계산
-                    int day = (int) ChronoUnit.DAYS.between(startDate, visitDate.toLocalDate()) + 1;
+                    // 여행 일차 계산 (시작일을 0일차로 계산)
+                    int day = (int) ChronoUnit.DAYS.between(startDate, visitDate.toLocalDate());
                     dto.day = day;
                 }
             }
