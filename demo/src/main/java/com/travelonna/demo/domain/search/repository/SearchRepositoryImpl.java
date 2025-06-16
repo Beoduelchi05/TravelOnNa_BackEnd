@@ -22,50 +22,45 @@ public class SearchRepositoryImpl implements SearchRepository {
 
     @Override
     public List<Place> searchPlacesByKeyword(String keyword) {
-        // p_name에서 키워드 검색 (isPublic = true인 경우만)
-        String jpql = "SELECT p FROM Place p WHERE p.name LIKE :keyword AND p.isPublic = true";
-        System.out.println("장소 검색 쿼리: " + jpql + ", 키워드: %" + keyword + "%");
+        // 1. 기본 검색 (기존 방식)
+        // 2. 공백 제거 검색 추가
+        // 3. 부분 단어 검색 추가
+        
+        String jpql = "SELECT DISTINCT p FROM Place p WHERE p.isPublic = true AND (" +
+                      "p.name LIKE :keyword OR " +                                    // 기본 검색
+                      "REPLACE(p.name, ' ', '') LIKE :keywordNoSpace OR " +          // 공백 제거 검색
+                      "REPLACE(REPLACE(p.name, ' ', ''), '-', '') LIKE :keywordNormalized)"; // 공백, 하이픈 제거 검색
+        
+        log.info("장소 검색 쿼리 (개선): {}, 키워드: {}", jpql, keyword);
+        
         TypedQuery<Place> query = em.createQuery(jpql, Place.class);
         query.setParameter("keyword", "%" + keyword + "%");
-        List<Place> results = query.getResultList();
-        System.out.println("검색된 공개 장소 수: " + results.size());
+        query.setParameter("keywordNoSpace", "%" + keyword.replace(" ", "") + "%");
+        query.setParameter("keywordNormalized", "%" + keyword.replace(" ", "").replace("-", "") + "%");
         
-        // 검색된 각 장소의 이름 출력
-        for (Place place : results) {
-            try {
-                java.lang.reflect.Field nameField = place.getClass().getDeclaredField("name");
-                nameField.setAccessible(true);
-                String placeName = (String) nameField.get(place);
-                System.out.println("검색된 공개 장소: " + placeName);
-            } catch (Exception e) {
-                System.out.println("장소명 조회 오류: " + e.getMessage());
-            }
-        }
+        List<Place> results = query.getResultList();
+        log.info("검색된 공개 장소 수 (개선): {}", results.size());
         
         return results;
     }
 
     @Override
     public List<Profile> searchProfilesByKeyword(String keyword) {
-        // nickname에서 키워드 검색 (모든 닉네임 대상)
-        String jpql = "SELECT p FROM Profile p WHERE p.nickname LIKE :keyword";
-        System.out.println("닉네임 검색 쿼리: " + jpql + ", 키워드: %" + keyword + "%");
+        // 닉네임도 동일하게 개선
+        String jpql = "SELECT DISTINCT p FROM Profile p WHERE (" +
+                      "p.nickname LIKE :keyword OR " +
+                      "REPLACE(p.nickname, ' ', '') LIKE :keywordNoSpace OR " +
+                      "REPLACE(REPLACE(p.nickname, ' ', ''), '-', '') LIKE :keywordNormalized)";
+        
+        log.info("닉네임 검색 쿼리 (개선): {}, 키워드: {}", jpql, keyword);
+        
         TypedQuery<Profile> query = em.createQuery(jpql, Profile.class);
         query.setParameter("keyword", "%" + keyword + "%");
-        List<Profile> results = query.getResultList();
-        System.out.println("검색된 닉네임 수: " + results.size());
+        query.setParameter("keywordNoSpace", "%" + keyword.replace(" ", "") + "%");
+        query.setParameter("keywordNormalized", "%" + keyword.replace(" ", "").replace("-", "") + "%");
         
-        // 검색된 각 닉네임 출력
-        for (Profile profile : results) {
-            try {
-                java.lang.reflect.Field nicknameField = profile.getClass().getDeclaredField("nickname");
-                nicknameField.setAccessible(true);
-                String nickname = (String) nicknameField.get(profile);
-                System.out.println("검색된 닉네임: " + nickname);
-            } catch (Exception e) {
-                System.out.println("닉네임 조회 오류: " + e.getMessage());
-            }
-        }
+        List<Profile> results = query.getResultList();
+        log.info("검색된 닉네임 수 (개선): {}", results.size());
         
         return results;
     }
@@ -74,10 +69,87 @@ public class SearchRepositoryImpl implements SearchRepository {
     public List<Log> searchLogsByKeyword(String keyword) {
         String jpql = "SELECT DISTINCT l FROM Log l " +
                       "WHERE l.isPublic = true " +
-                      "AND l.comment LIKE :keyword";
+                      "AND (l.comment LIKE :keyword OR " +
+                      "REPLACE(l.comment, ' ', '') LIKE :keywordNoSpace OR " +
+                      "REPLACE(REPLACE(l.comment, ' ', ''), '-', '') LIKE :keywordNormalized)";
+        
+        log.info("로그 검색 쿼리 (개선): {}, 키워드: {}", jpql, keyword);
         
         TypedQuery<Log> query = em.createQuery(jpql, Log.class);
         query.setParameter("keyword", "%" + keyword + "%");
+        query.setParameter("keywordNoSpace", "%" + keyword.replace(" ", "") + "%");
+        query.setParameter("keywordNormalized", "%" + keyword.replace(" ", "").replace("-", "") + "%");
+        
         return query.getResultList();
+    }
+
+    @Override
+    public List<Place> searchPlacesByKeyword(String keyword, Integer offset, Integer limit) {
+        String jpql = "SELECT DISTINCT p FROM Place p WHERE p.isPublic = true AND (" +
+                      "p.name LIKE :keyword OR " +
+                      "REPLACE(p.name, ' ', '') LIKE :keywordNoSpace OR " +
+                      "REPLACE(REPLACE(p.name, ' ', ''), '-', '') LIKE :keywordNormalized) " +
+                      "ORDER BY p.placeId";
+        
+        log.info("장소 검색 쿼리 (페이지네이션, 개선): {}, 키워드: {}, offset: {}, limit: {}", jpql, keyword, offset, limit);
+        
+        TypedQuery<Place> query = em.createQuery(jpql, Place.class);
+        query.setParameter("keyword", "%" + keyword + "%");
+        query.setParameter("keywordNoSpace", "%" + keyword.replace(" ", "") + "%");
+        query.setParameter("keywordNormalized", "%" + keyword.replace(" ", "").replace("-", "") + "%");
+        query.setFirstResult(offset);
+        query.setMaxResults(limit);
+        
+        List<Place> results = query.getResultList();
+        log.info("검색된 공개 장소 수 (페이지네이션, 개선): {}", results.size());
+        
+        return results;
+    }
+
+    @Override
+    public List<Profile> searchProfilesByKeyword(String keyword, Integer offset, Integer limit) {
+        String jpql = "SELECT DISTINCT p FROM Profile p WHERE (" +
+                      "p.nickname LIKE :keyword OR " +
+                      "REPLACE(p.nickname, ' ', '') LIKE :keywordNoSpace OR " +
+                      "REPLACE(REPLACE(p.nickname, ' ', ''), '-', '') LIKE :keywordNormalized) " +
+                      "ORDER BY p.userId";
+        
+        log.info("닉네임 검색 쿼리 (페이지네이션, 개선): {}, 키워드: {}, offset: {}, limit: {}", jpql, keyword, offset, limit);
+        
+        TypedQuery<Profile> query = em.createQuery(jpql, Profile.class);
+        query.setParameter("keyword", "%" + keyword + "%");
+        query.setParameter("keywordNoSpace", "%" + keyword.replace(" ", "") + "%");
+        query.setParameter("keywordNormalized", "%" + keyword.replace(" ", "").replace("-", "") + "%");
+        query.setFirstResult(offset);
+        query.setMaxResults(limit);
+        
+        List<Profile> results = query.getResultList();
+        log.info("검색된 닉네임 수 (페이지네이션, 개선): {}", results.size());
+        
+        return results;
+    }
+
+    @Override
+    public List<Log> searchLogsByKeyword(String keyword, Integer offset, Integer limit) {
+        String jpql = "SELECT DISTINCT l FROM Log l " +
+                      "WHERE l.isPublic = true " +
+                      "AND (l.comment LIKE :keyword OR " +
+                      "REPLACE(l.comment, ' ', '') LIKE :keywordNoSpace OR " +
+                      "REPLACE(REPLACE(l.comment, ' ', ''), '-', '') LIKE :keywordNormalized) " +
+                      "ORDER BY l.logId DESC";
+        
+        log.info("로그 검색 쿼리 (페이지네이션, 개선): {}, 키워드: {}, offset: {}, limit: {}", jpql, keyword, offset, limit);
+        
+        TypedQuery<Log> query = em.createQuery(jpql, Log.class);
+        query.setParameter("keyword", "%" + keyword + "%");
+        query.setParameter("keywordNoSpace", "%" + keyword.replace(" ", "") + "%");
+        query.setParameter("keywordNormalized", "%" + keyword.replace(" ", "").replace("-", "") + "%");
+        query.setFirstResult(offset);
+        query.setMaxResults(limit);
+        
+        List<Log> results = query.getResultList();
+        log.info("검색된 로그 수 (페이지네이션, 개선): {}", results.size());
+        
+        return results;
     }
 } 

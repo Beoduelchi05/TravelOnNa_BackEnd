@@ -228,7 +228,7 @@ public class PlanService {
         
         Plan plan = planOpt.get();
         
-        // 1. 공개 일정인 경우 누구나 접근 가능
+        // 1. 공개 일정인 경우 로그인한 사용자라면 누구나 접근 가능
         if (plan.getIsPublic() != null && plan.getIsPublic()) {
             log.debug("공개 일정 접근 허용: planId={}, userId={}", planId, userId);
             return plan;

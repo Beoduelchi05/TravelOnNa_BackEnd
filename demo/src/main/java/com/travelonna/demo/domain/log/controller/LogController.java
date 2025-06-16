@@ -72,7 +72,7 @@ public class LogController {
     public ResponseEntity<ApiResponse<LogResponseDto>> getLog(
             @Parameter(description = "조회할 기록 ID", required = true, example = "1") 
             @PathVariable Integer logId) {
-        // 현재 로그인한 사용자 ID (인증 구현 필요)
+        // 현재 로그인한 사용자 ID (인증 필요)
         Integer userId = getCurrentUserId();
         
         LogResponseDto responseDto = logService.getLog(logId, userId);

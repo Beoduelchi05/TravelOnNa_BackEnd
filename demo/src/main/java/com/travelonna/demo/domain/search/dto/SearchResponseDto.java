@@ -35,6 +35,9 @@ public class SearchResponseDto {
     @Builder.Default
     private List<LogDto> logs = new ArrayList<>();
     
+    @Schema(description = "검색 메타 정보")
+    private SearchMetaDto meta;
+    
     @Getter
     @Setter
     @Builder
@@ -217,5 +220,38 @@ public class SearchResponseDto {
             
             return dto;
         }
+    }
+    
+    @Getter
+    @Setter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(description = "검색 메타 정보")
+    public static class SearchMetaDto {
+        
+        @Schema(description = "검색어")
+        private String keyword;
+        
+        @Schema(description = "정규화된 검색어")
+        private String normalizedKeyword;
+        
+        @Schema(description = "총 장소 결과 수")
+        private Integer totalPlaces;
+        
+        @Schema(description = "총 사용자 결과 수")
+        private Integer totalUsers;
+        
+        @Schema(description = "총 로그 결과 수")
+        private Integer totalLogs;
+        
+        @Schema(description = "각 카테고리별 제한 수")
+        private Integer limitPerCategory;
+        
+        @Schema(description = "검색 실행 시간 (ms)")
+        private Long executionTimeMs;
+        
+        @Schema(description = "검색 개선 적용 여부 (띄어쓰기 무시 등)")
+        private Boolean enhancedSearchApplied;
     }
 } 

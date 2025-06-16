@@ -17,19 +17,18 @@ import com.travelonna.demo.domain.log.entity.LogImage;
 import com.travelonna.demo.domain.log.repository.LikesRepository;
 import com.travelonna.demo.domain.log.repository.LogImageRepository;
 import com.travelonna.demo.domain.log.repository.LogRepository;
+import com.travelonna.demo.domain.plan.entity.MapCode;
 import com.travelonna.demo.domain.plan.entity.Place;
 import com.travelonna.demo.domain.plan.entity.Plan;
-import com.travelonna.demo.domain.plan.entity.MapCode;
-import com.travelonna.demo.domain.plan.entity.MyMap;
-import com.travelonna.demo.domain.plan.repository.PlaceRepository;
-import com.travelonna.demo.domain.plan.repository.PlanRepository;
 import com.travelonna.demo.domain.plan.repository.MapCodeRepository;
 import com.travelonna.demo.domain.plan.repository.MyMapRepository;
+import com.travelonna.demo.domain.plan.repository.PlaceRepository;
+import com.travelonna.demo.domain.plan.repository.PlanRepository;
+import com.travelonna.demo.domain.plan.service.MyMapService;
 import com.travelonna.demo.domain.user.entity.User;
 import com.travelonna.demo.domain.user.entity.UserAction.TargetType;
 import com.travelonna.demo.domain.user.repository.UserRepository;
 import com.travelonna.demo.domain.user.service.UserActionService;
-import com.travelonna.demo.domain.plan.service.MyMapService;
 import com.travelonna.demo.global.exception.ResourceNotFoundException;
 
 import lombok.RequiredArgsConstructor;
@@ -243,7 +242,8 @@ public class LogService {
         Log log = logRepository.findByIdWithDetails(logId)
                 .orElseThrow(() -> new ResourceNotFoundException("Log not found"));
         
-        // 비공개 기록인 경우 권한 확인
+        // 비공개 기록인 경우 권한 확인 (작성자만 접근 가능)
+        // 공개 기록인 경우 로그인한 사용자라면 누구나 접근 가능
         if (!log.getIsPublic() && !log.getUser().getUserId().equals(userId)) {
             throw new IllegalArgumentException("User is not authorized to view this log");
         }
@@ -279,10 +279,12 @@ public class LogService {
         responseDto.setPlaceNames(placeNames);
         
         // Log에 직접 연결된 Place가 없는 경우, Plan의 첫 번째 Place 정보 사용
-        if (responseDto.getPlaceId() == null && responseDto.getPlaceName() == null && !places.isEmpty()) {
-            Place firstPlace = places.get(0);
-            responseDto.setPlaceId(firstPlace.getPlaceId());
-            responseDto.setPlaceName(firstPlace.getName());
+        if (log.getPlace() != null) {
+            responseDto.setPlaceId(log.getPlace().getPlaceId());
+            responseDto.setPlaceName(log.getPlace().getName());
+        } else if (!places.isEmpty()) {
+            responseDto.setPlaceId(places.get(0).getPlaceId());
+            responseDto.setPlaceName(places.get(0).getName());
         }
         
         return responseDto;

@@ -31,4 +31,34 @@ public interface SearchRepository {
      * @return 검색된 여행 기록 목록
      */
     List<Log> searchLogsByKeyword(String keyword);
+    
+    /**
+     * 키워드로 장소를 검색합니다. (페이지네이션 지원)
+     * 
+     * @param keyword 검색 키워드
+     * @param offset 시작 위치
+     * @param limit 최대 결과 수
+     * @return 검색된 장소 목록
+     */
+    List<Place> searchPlacesByKeyword(String keyword, Integer offset, Integer limit);
+    
+    /**
+     * 키워드로 사용자 프로필을 검색합니다. (페이지네이션 지원)
+     * 
+     * @param keyword 검색 키워드
+     * @param offset 시작 위치
+     * @param limit 최대 결과 수
+     * @return 검색된 프로필 목록
+     */
+    List<Profile> searchProfilesByKeyword(String keyword, Integer offset, Integer limit);
+    
+    /**
+     * 키워드로 여행 기록을 검색합니다. (페이지네이션 지원)
+     * 
+     * @param keyword 검색 키워드
+     * @param offset 시작 위치
+     * @param limit 최대 결과 수
+     * @return 검색된 여행 기록 목록
+     */
+    List<Log> searchLogsByKeyword(String keyword, Integer offset, Integer limit);
 } 
