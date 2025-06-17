@@ -234,13 +234,13 @@ docker run -p 8080:8080 -v /path/to/config:/config travelonna-backend
 
 # 문의 및 지원
 
-## 📧 Contact
+## Contact
 - **이메일**: beoduelchi05@gmail.com
 - **GitHub Issues**: [이슈 등록](https://github.com/Beoduelchi05/TravelOnNa_BackEnd/issues)
 
-## 🤝 Support
+## Support
 프로젝트에 대한 질문이나 제안사항이 있으시면 언제든지 연락해 주세요!
 
 ---
 
-**Built with ❤️ by Beoduelchi Team**
+**Built with by Beoduelchi Team**
