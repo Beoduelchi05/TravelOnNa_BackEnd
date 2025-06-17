@@ -17,9 +17,9 @@
 <tr>
 <td><a href="https://github.com/KIMMIN5" target="_blank">김민오</a></td>
 <td>BE, DevOps, AI/ML</td>
-<td>백엔드 아키텍처 설계, OAuth2 인증<br>
+<td>OAuth2 인증, 여행장소<br>
 AWS 인프라 구축, Docker 컨테이너화, CI/CD 파이프라인 구성<br>
-추천 시스템 개발, ALS 협업 필터링</td>
+추천 관련 API</td>
 <td>
   <img src="https://img.shields.io/badge/Spring_Boot-6db33f?style=for-the-badge&logo=springboot&logoColor=white" alt="Spring Boot">
   <img src="https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white" alt="MySQL">
@@ -28,7 +28,6 @@ AWS 인프라 구축, Docker 컨테이너화, CI/CD 파이프라인 구성<br>
   <img src="https://img.shields.io/badge/Jenkins-D24939?style=for-the-badge&logo=jenkins&logoColor=white" alt="Jenkins">
   <img src="https://img.shields.io/badge/Ansible-EE0000?style=for-the-badge&logo=ansible&logoColor=white" alt="Ansible">
   <img src="https://img.shields.io/badge/Kubernetes-326CE5?style=for-the-badge&logo=kubernetes&logoColor=white" alt="Kubernetes">
-  <img src="https://img.shields.io/badge/PyTorch-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white" alt="PyTorch">
 </td>
 </tr>
 <tr>
@@ -55,9 +54,9 @@ AWS 인프라 구축, Docker 컨테이너화, CI/CD 파이프라인 구성<br>
 [![Swagger API](https://img.shields.io/badge/API_Docs-Swagger-85ea2d?style=for-the-badge&logo=swagger&logoColor=black)](http://localhost:8080/swagger-ui.html)
 [![Docker Hub](https://img.shields.io/badge/Docker-Hub-2496ED?style=for-the-badge&logo=docker&logoColor=white)](#)
 
-**여행ON나(TravelOnNa)**는 **트리플의 여행 계획 생성**과 **인스타그램의 소셜 네트워크 기능**이 결합된 혁신적인 소셜 관광 플랫폼의 백엔드 시스템입니다.
-
-사용자가 여행 계획을 세우고, 여행 기록을 공유하며, AI 기반 개인화 추천을 통해 새로운 여행 경험을 발견할 수 있도록 돕는 REST API 서버입니다.
+여행의 시작과 끝을 하나로, <span style="color:#5E7BF9">**여행ON나**</span><br>
+여행의 모든 순간을 하나의 플랫폼에서 계획부터 기록, 공유까지 seamlessly AI기반의 맞춤 추천과 효율적인 일정 관리로<br>
+더 스마트한 여행 경험 제공 여러 앱을 번갈아 쓰는 불편함 없이,하나의 앱에서 통합된 여행 솔루션 제공
 
 # 주요 기능
 
